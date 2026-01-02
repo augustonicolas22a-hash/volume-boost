@@ -23,9 +23,7 @@ declare global {
   }
 }
 
-// Site key is public and can be stored in code
-// Replace with your actual Cloudflare Turnstile site key
-const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY || '0x4AAAAAABLpGpFB6_X-cZBQ';
+const TURNSTILE_SITE_KEY = '0x4AAAAAACKP0Hudn-J9HsO3';
 
 export function TurnstileWidget({ onVerify, onExpire, onError }: TurnstileWidgetProps) {
   const containerRef = useRef<HTMLDivElement>(null);
