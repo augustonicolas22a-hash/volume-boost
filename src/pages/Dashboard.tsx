@@ -37,38 +37,38 @@ export default function Dashboard() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-8 animate-fade-in">
+      <div className="space-y-6 sm:space-y-8 animate-fade-in">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">
+            <h1 className="text-xl sm:text-2xl font-bold text-foreground">
               Olá, {admin.nome}!
             </h1>
-            <p className="text-muted-foreground">
+            <p className="text-sm sm:text-base text-muted-foreground">
               Bem-vindo de volta ao seu painel de controle
             </p>
           </div>
           <div className="flex items-center gap-2 text-muted-foreground">
             <Sparkles className="h-5 w-5" />
-            <span>Pronto para criar</span>
+            <span className="text-sm">Pronto para criar</span>
           </div>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
           <StatsCard
             title="Créditos Disponíveis"
             value={credits.toLocaleString('pt-BR')}
             subtitle="Créditos ativos"
             variant="green"
-            icon={<CreditCard className="h-8 w-8" />}
+            icon={<CreditCard className="h-6 w-6 sm:h-8 sm:w-8" />}
           />
           <StatsCard
             title="Seu Status"
             value={`${roleBadge.label} ${'★'.repeat(roleBadge.stars)}`}
             subtitle="Nível de acesso premium"
             variant="pink"
-            icon={<Crown className="h-8 w-8" />}
+            icon={<Crown className="h-6 w-6 sm:h-8 sm:w-8" />}
           />
         </div>
 

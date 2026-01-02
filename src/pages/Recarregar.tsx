@@ -323,37 +323,37 @@ export default function Recarregar() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-8 animate-fade-in max-w-4xl">
-        <div className="flex items-center justify-between">
+      <div className="space-y-6 sm:space-y-8 animate-fade-in max-w-4xl mx-auto">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Recarregar Créditos</h1>
-            <p className="text-muted-foreground">
+            <h1 className="text-xl sm:text-2xl font-bold text-foreground">Recarregar Créditos</h1>
+            <p className="text-sm sm:text-base text-muted-foreground">
               Adicione créditos via PIX com desconto por volume
             </p>
           </div>
-          <div className="text-right">
-            <p className="text-sm text-muted-foreground">Saldo atual</p>
-            <p className="text-2xl font-bold text-primary">{credits} créditos</p>
+          <div className="text-left sm:text-right">
+            <p className="text-xs sm:text-sm text-muted-foreground">Saldo atual</p>
+            <p className="text-xl sm:text-2xl font-bold text-primary">{credits} créditos</p>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+            <CardHeader className="p-4 sm:p-6">
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
                 <Tag className="h-5 w-5 text-primary" />
                 Tabela de Preços
               </CardTitle>
-              <CardDescription>Quanto maior a quantidade, menor o preço</CardDescription>
+              <CardDescription className="text-xs sm:text-sm">Quanto maior a quantidade, menor o preço</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
               <div className="space-y-2">
                 {PRICE_TIERS.map((tier, i) => (
-                  <div key={i} className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
-                    <span className="text-sm">
+                  <div key={i} className="flex justify-between items-center p-2 sm:p-3 rounded-lg bg-muted/50">
+                    <span className="text-xs sm:text-sm">
                       {tier.maxQty === Infinity ? `${tier.minQty}+ créditos` : `${tier.minQty} - ${tier.maxQty} créditos`}
                     </span>
-                    <Badge variant={tier.price <= 10 ? 'default' : 'secondary'}>
+                    <Badge variant={tier.price <= 10 ? 'default' : 'secondary'} className="text-xs">
                       R$ {tier.price.toFixed(2)}/un
                     </Badge>
                   </div>
@@ -363,37 +363,37 @@ export default function Recarregar() {
           </Card>
 
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+            <CardHeader className="p-4 sm:p-6">
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
                 <Calculator className="h-5 w-5 text-primary" />
                 Calculadora
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0 space-y-4 sm:space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="quantity">Quantidade de Créditos</Label>
+                <Label htmlFor="quantity" className="text-sm">Quantidade de Créditos</Label>
                 <Input
                   id="quantity"
                   type="number"
                   min={1}
                   value={quantity}
                   onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 0))}
-                  className="text-lg"
+                  className="text-base sm:text-lg"
                 />
               </div>
 
-              <div className="p-4 rounded-lg gradient-green text-success-foreground space-y-3">
-                <div className="flex justify-between">
+              <div className="p-3 sm:p-4 rounded-lg gradient-green text-success-foreground space-y-2 sm:space-y-3">
+                <div className="flex justify-between text-sm sm:text-base">
                   <span>Preço unitário:</span>
                   <span className="font-bold">R$ {unitPrice.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between text-xl">
+                <div className="flex justify-between text-lg sm:text-xl">
                   <span>Total:</span>
                   <span className="font-bold">R$ {total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                 </div>
               </div>
 
-              <Button className="w-full h-12 text-lg" onClick={handleRecharge} disabled={isProcessing || quantity < 1}>
+              <Button className="w-full h-11 sm:h-12 text-base sm:text-lg" onClick={handleRecharge} disabled={isProcessing || quantity < 1}>
                 {isProcessing ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <QrCode className="mr-2 h-5 w-5" />}
                 {isProcessing ? 'Gerando PIX...' : 'Gerar PIX'}
               </Button>

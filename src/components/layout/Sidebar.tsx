@@ -59,7 +59,7 @@ export function Sidebar() {
   return (
     <aside className="fixed left-0 top-0 h-screen w-64 bg-card border-r border-border flex flex-col">
       <div className="p-6 border-b border-border">
-        <h1 className="text-xl font-bold text-primary">Painel Admin</h1>
+        <h1 className="text-xl font-bold text-primary">Data Sistemas</h1>
         <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
           {getRoleIcon()}
           <span>{getRoleLabel()}</span>
