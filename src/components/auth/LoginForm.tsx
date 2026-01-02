@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 import { Logo } from '@/components/Logo';
 import { PinPad } from './PinPad';
+import { TurnstileWidget } from './TurnstileWidget';
 import { supabase } from '@/integrations/supabase/client';
 
 interface PendingAdmin {
@@ -27,10 +28,46 @@ export function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [pendingAdmin, setPendingAdmin] = useState<PendingAdmin | null>(null);
   const [pinLoading, setPinLoading] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+
+  const handleTurnstileVerify = useCallback((token: string) => {
+    setTurnstileToken(token);
+  }, []);
+
+  const handleTurnstileExpire = useCallback(() => {
+    setTurnstileToken(null);
+  }, []);
+
+  const verifyTurnstile = async (token: string): Promise<boolean> => {
+    try {
+      const { data, error } = await supabase.functions.invoke('verify-turnstile', {
+        body: { token }
+      });
+      return data?.success === true;
+    } catch (error) {
+      console.error('Turnstile verification error:', error);
+      return false;
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!turnstileToken) {
+      toast.error('Por favor, complete a verificação de segurança');
+      return;
+    }
+
     setLoading(true);
+
+    // Verify turnstile token
+    const isValid = await verifyTurnstile(turnstileToken);
+    if (!isValid) {
+      toast.error('Verificação de segurança falhou. Tente novamente.');
+      setTurnstileToken(null);
+      setLoading(false);
+      return;
+    }
 
     // First, validate login credentials
     const { data, error } = await supabase.rpc('validate_login', {
@@ -176,7 +213,17 @@ export function LoginForm() {
               required
             />
           </div>
-          <Button type="submit" className="w-full" disabled={loading}>
+          
+          <TurnstileWidget 
+            onVerify={handleTurnstileVerify}
+            onExpire={handleTurnstileExpire}
+          />
+          
+          <Button 
+            type="submit" 
+            className="w-full" 
+            disabled={loading || !turnstileToken}
+          >
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Entrar
           </Button>
