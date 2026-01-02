@@ -14,7 +14,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Link, useLocation } from 'react-router-dom';
 import { ThemeToggle } from '@/components/ThemeToggle';
-import logo from '@/assets/logo.png';
+import { Logo } from '@/components/Logo';
 
 interface NavItem {
   label: string;
@@ -63,7 +63,7 @@ export function Sidebar() {
       <div className="p-6 border-b border-border">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src={logo} alt="Data Sistemas" className="h-10 w-10 dark:invert" />
+            <Logo className="h-10 w-10" />
             <h1 className="text-xl font-bold text-primary">Data Sistemas</h1>
           </div>
           <ThemeToggle />
