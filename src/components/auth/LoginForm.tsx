@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 import { Logo } from '@/components/Logo';
 import { PinPad } from './PinPad';
-import { TurnstileWidget } from './TurnstileWidget';
+import { TurnstileWidget, TURNSTILE_ENABLED } from './TurnstileWidget';
 import { supabase } from '@/integrations/supabase/client';
 
 interface PendingAdmin {
@@ -22,7 +22,7 @@ interface PendingAdmin {
 }
 
 export function LoginForm() {
-  const { signIn, updateAdmin } = useAuth();
+  const { signIn } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -53,23 +53,28 @@ export function LoginForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!turnstileToken) {
-      toast.error('Por favor, complete a verificação de segurança');
-      return;
+    // Only check turnstile if enabled
+    if (TURNSTILE_ENABLED) {
+      if (!turnstileToken) {
+        toast.error('Por favor, complete a verificação de segurança');
+        return;
+      }
+
+      setLoading(true);
+
+      // Verify turnstile token
+      const isValid = await verifyTurnstile(turnstileToken);
+      if (!isValid) {
+        toast.error('Verificação de segurança falhou. Tente novamente.');
+        setTurnstileToken(null);
+        setLoading(false);
+        return;
+      }
+    } else {
+      setLoading(true);
     }
 
-    setLoading(true);
-
-    // Verify turnstile token
-    const isValid = await verifyTurnstile(turnstileToken);
-    if (!isValid) {
-      toast.error('Verificação de segurança falhou. Tente novamente.');
-      setTurnstileToken(null);
-      setLoading(false);
-      return;
-    }
-
-    // First, validate login credentials
+    // Validate login credentials
     const { data, error } = await supabase.rpc('validate_login', {
       p_email: email,
       p_key: password
@@ -214,15 +219,17 @@ export function LoginForm() {
             />
           </div>
           
-          <TurnstileWidget 
-            onVerify={handleTurnstileVerify}
-            onExpire={handleTurnstileExpire}
-          />
+          {TURNSTILE_ENABLED && (
+            <TurnstileWidget 
+              onVerify={handleTurnstileVerify}
+              onExpire={handleTurnstileExpire}
+            />
+          )}
           
           <Button 
             type="submit" 
             className="w-full" 
-            disabled={loading || !turnstileToken}
+            disabled={loading || (TURNSTILE_ENABLED && !turnstileToken)}
           >
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Entrar
