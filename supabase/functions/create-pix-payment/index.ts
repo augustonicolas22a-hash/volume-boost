@@ -70,26 +70,29 @@ serve(async (req) => {
     const sanitizedAdminName = adminName.replace(/[<>\"'&]/g, '').trim().substring(0, 50);
     const identifier = `ADMIN_${adminId}_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
     
-    // Calculate split (5% for partner)
-    const amountSplit = Math.round(amount * 0.05 * 100) / 100;
-    
-    const pixRequest = {
+    // Build PIX request - without splits for small amounts to avoid fee issues
+    const pixRequest: any = {
       identifier: identifier,
       amount: Math.round(amount * 100) / 100,
       client: {
         name: sanitizedAdminName,
         email: `admin${adminId}@sistema.com`,
-        phone: "(00) 00000-0000",
-        document: "00000000000"
+        phone: "(83) 99999-9999",
+        document: "05916691378" // CPF válido para testes
       },
-      splits: [
+      callbackUrl: `${supabaseUrl}/functions/v1/vizzionpay-webhook`
+    };
+
+    // Only add splits for amounts > 10 to avoid fee calculation issues
+    if (amount > 10) {
+      const amountSplit = Math.round(amount * 0.05 * 100) / 100;
+      pixRequest.splits = [
         {
           producerId: 'cmd80ujse00klosducwe52nkw',
           amount: amountSplit
         }
-      ],
-      callbackUrl: `${supabaseUrl}/functions/v1/vizzionpay-webhook`
-    };
+      ];
+    }
 
     console.log('VizzionPay request:', JSON.stringify(pixRequest, null, 2));
     
