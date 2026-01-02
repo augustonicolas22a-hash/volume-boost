@@ -13,7 +13,8 @@ import { toast } from 'sonner';
 import { CreditCard, Tag, Calculator, QrCode, Loader2, Clock, CheckCircle, XCircle } from 'lucide-react';
 
 const PRICE_TIERS = [
-  { minQty: 1, maxQty: 99, price: 14 },
+  { minQty: 1, maxQty: 9, price: 1 }, // Preço de teste - R$1 por crédito
+  { minQty: 10, maxQty: 99, price: 14 },
   { minQty: 100, maxQty: 199, price: 13 },
   { minQty: 200, maxQty: 299, price: 12 },
   { minQty: 300, maxQty: 399, price: 11 },
