@@ -6,44 +6,82 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Server-side price tiers - MUST match frontend exactly
+const PRICE_TIERS = [
+  { minQty: 10, maxQty: 10, price: 14 },
+  { minQty: 25, maxQty: 25, price: 13.5 },
+  { minQty: 50, maxQty: 50, price: 13 },
+  { minQty: 100, maxQty: 100, price: 12.5 },
+  { minQty: 150, maxQty: 150, price: 12 },
+  { minQty: 200, maxQty: 200, price: 11.5 },
+  { minQty: 250, maxQty: 250, price: 11 },
+];
+
+// Allowed credit packages - ONLY these are valid
+const ALLOWED_PACKAGES = [10, 25, 50, 100, 150, 200, 250];
+
+function calculatePrice(quantity: number): { unitPrice: number; total: number } | null {
+  // Only allow exact package amounts
+  if (!ALLOWED_PACKAGES.includes(quantity)) {
+    return null;
+  }
+  const tier = PRICE_TIERS.find(t => quantity >= t.minQty && quantity <= t.maxQty);
+  if (!tier) return null;
+  return { unitPrice: tier.price, total: quantity * tier.price };
+}
+
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { amount, credits, adminId, adminName, packageId } = await req.json();
+    const { credits, adminId, adminName, sessionToken } = await req.json();
     
     console.log('=== PIX PAYMENT REQUEST ===');
-    console.log('Request body:', { amount, credits, adminId, adminName, packageId });
+    console.log('Request body:', { credits, adminId, adminName });
     
-    // Validate input
-    if (!amount || !credits || !adminId || !adminName || 
-        typeof amount !== 'number' || typeof credits !== 'number' || 
-        typeof adminId !== 'number' || typeof adminName !== 'string') {
+    // Validate input types
+    if (!credits || !adminId || !adminName || !sessionToken ||
+        typeof credits !== 'number' || typeof adminId !== 'number' || 
+        typeof adminName !== 'string' || typeof sessionToken !== 'string') {
+      console.error('Invalid input types');
       return new Response(JSON.stringify({ error: "Dados incompletos ou inválidos" }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    if (amount <= 0 || amount > 10000 || credits <= 0 || credits > 250) {
-      return new Response(JSON.stringify({ error: "Valores fora dos limites permitidos" }), {
+    // Validate credits is an allowed package
+    if (!ALLOWED_PACKAGES.includes(credits)) {
+      console.error('Invalid credits package:', credits);
+      return new Response(JSON.stringify({ error: "Pacote de créditos inválido" }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    // Calculate price server-side
+    const pricing = calculatePrice(credits);
+    if (!pricing) {
+      console.error('Could not calculate price for:', credits);
+      return new Response(JSON.stringify({ error: "Erro ao calcular preço" }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const { total: amount } = pricing;
 
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Verify admin exists
+    // Verify admin exists AND session token matches (prevents manipulation)
     const { data: admin, error: adminError } = await supabase
       .from('admins')
-      .select('id, nome')
+      .select('id, nome, rank, session_token')
       .eq('id', adminId)
       .single();
 
@@ -51,6 +89,24 @@ serve(async (req) => {
       console.error('Admin not found:', adminError);
       return new Response(JSON.stringify({ error: "Admin não encontrado" }), {
         status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Validate session token - prevents localStorage manipulation
+    if (admin.session_token !== sessionToken) {
+      console.error('Session token mismatch');
+      return new Response(JSON.stringify({ error: "Sessão inválida. Faça login novamente." }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Verify only masters can recharge
+    if (admin.rank !== 'master') {
+      console.error('Non-master trying to recharge');
+      return new Response(JSON.stringify({ error: "Apenas masters podem recarregar" }), {
+        status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -70,7 +126,6 @@ serve(async (req) => {
     const sanitizedAdminName = adminName.replace(/[<>\"'&]/g, '').trim().substring(0, 50);
     const identifier = `ADMIN_${adminId}_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
     
-    // Build PIX request - without splits for small amounts to avoid fee issues
     const pixRequest: any = {
       identifier: identifier,
       amount: Math.round(amount * 100) / 100,
@@ -78,12 +133,11 @@ serve(async (req) => {
         name: sanitizedAdminName,
         email: `admin${adminId}@sistema.com`,
         phone: "(83) 99999-9999",
-        document: "05916691378" // CPF válido para testes
+        document: "05916691378"
       },
       callbackUrl: `${supabaseUrl}/functions/v1/vizzionpay-webhook`
     };
 
-    // Only add splits for amounts > 10 to avoid fee calculation issues
     if (amount > 10) {
       const amountSplit = Math.round(amount * 0.05 * 100) / 100;
       pixRequest.splits = [
@@ -115,7 +169,7 @@ serve(async (req) => {
     }
 
     const pixData = await vizzionResponse.json();
-    console.log('📨 VizzionPay response received:', JSON.stringify(pixData, null, 2));
+    console.log('VizzionPay response received:', JSON.stringify(pixData, null, 2));
 
     if (!pixData.transactionId || typeof pixData.transactionId !== 'string') {
       throw new Error('Invalid VizzionPay response');
@@ -138,7 +192,7 @@ serve(async (req) => {
       throw new Error('Erro ao salvar pagamento no banco');
     }
 
-    console.log('✅ Pagamento PIX salvo no banco de dados com transactionId:', pixData.transactionId);
+    console.log('Pagamento PIX salvo no banco de dados com transactionId:', pixData.transactionId);
 
     const responseData = {
       transactionId: pixData.transactionId,
