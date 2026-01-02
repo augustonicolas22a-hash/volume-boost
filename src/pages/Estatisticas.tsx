@@ -17,17 +17,15 @@ interface Stats {
 }
 
 interface Transaction {
-  id: string;
+  id: number;
   amount: number;
   transaction_type: string;
   total_price: number | null;
   created_at: string;
-  from_email?: string;
-  to_email?: string;
 }
 
 export default function Estatisticas() {
-  const { user, role, loading } = useAuth();
+  const { admin, role, loading } = useAuth();
   const [stats, setStats] = useState<Stats>({
     totalMasters: 0,
     totalResellers: 0,
@@ -38,31 +36,31 @@ export default function Estatisticas() {
   const [loadingData, setLoadingData] = useState(true);
 
   useEffect(() => {
-    if (user && role === 'dono') {
+    if (admin && role === 'dono') {
       fetchStats();
     }
-  }, [user, role]);
+  }, [admin, role]);
 
   const fetchStats = async () => {
     try {
       // Count masters
       const { count: mastersCount } = await supabase
-        .from('user_roles')
+        .from('admins')
         .select('*', { count: 'exact', head: true })
-        .eq('role', 'master');
+        .eq('rank', 'master');
 
       // Count resellers
       const { count: resellersCount } = await supabase
-        .from('user_roles')
+        .from('admins')
         .select('*', { count: 'exact', head: true })
-        .eq('role', 'revendedor');
+        .eq('rank', 'revendedor');
 
       // Total credits in system
-      const { data: creditsData } = await supabase
-        .from('credits')
-        .select('balance');
+      const { data: adminsData } = await supabase
+        .from('admins')
+        .select('creditos');
       
-      const totalCredits = creditsData?.reduce((sum, c) => sum + c.balance, 0) || 0;
+      const totalCredits = adminsData?.reduce((sum, a) => sum + (a.creditos || 0), 0) || 0;
 
       // Transactions
       const { data: txData, count: txCount } = await supabase
@@ -94,7 +92,7 @@ export default function Estatisticas() {
     );
   }
 
-  if (!user) {
+  if (!admin) {
     return <Navigate to="/login" replace />;
   }
 

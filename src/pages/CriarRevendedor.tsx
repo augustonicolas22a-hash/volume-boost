@@ -11,7 +11,7 @@ import { toast } from 'sonner';
 import { UserPlus, Loader2 } from 'lucide-react';
 
 export default function CriarRevendedor() {
-  const { user, role, loading } = useAuth();
+  const { admin, role, loading } = useAuth();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -27,7 +27,7 @@ export default function CriarRevendedor() {
     );
   }
 
-  if (!user) {
+  if (!admin) {
     return <Navigate to="/login" replace />;
   }
 
@@ -40,38 +40,19 @@ export default function CriarRevendedor() {
     setIsCreating(true);
 
     try {
-      // Create user
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: formData.email,
-        password: formData.password,
-        options: {
-          data: { name: formData.name }
-        }
-      });
-
-      if (authError) throw authError;
-      if (!authData.user) throw new Error('Erro ao criar usuário');
-
-      // Add revendedor role
-      const { error: roleError } = await supabase
-        .from('user_roles')
+      // Create admin with revendedor role
+      const { error } = await supabase
+        .from('admins')
         .insert({
-          user_id: authData.user.id,
-          role: 'revendedor',
-          created_by: user.id
+          nome: formData.name,
+          email: formData.email.toLowerCase().trim(),
+          key: formData.password,
+          rank: 'revendedor',
+          criado_por: admin.id,
+          creditos: 0
         });
 
-      if (roleError) throw roleError;
-
-      // Create relationship
-      const { error: relError } = await supabase
-        .from('reseller_relationships')
-        .insert({
-          master_id: user.id,
-          reseller_id: authData.user.id
-        });
-
-      if (relError) throw relError;
+      if (error) throw error;
 
       toast.success('Revendedor criado com sucesso!', {
         description: `Email: ${formData.email}`
@@ -131,7 +112,7 @@ export default function CriarRevendedor() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password">Senha</Label>
+                <Label htmlFor="password">Senha (Key)</Label>
                 <Input
                   id="password"
                   type="password"

@@ -12,13 +12,13 @@ import { toast } from 'sonner';
 import { Send, Loader2, CreditCard } from 'lucide-react';
 
 interface Reseller {
-  id: string;
+  id: number;
   email: string;
-  name: string | null;
+  nome: string;
 }
 
 export default function Transferir() {
-  const { user, role, credits, loading, refreshCredits } = useAuth();
+  const { admin, role, credits, loading, refreshCredits } = useAuth();
   const [resellers, setResellers] = useState<Reseller[]>([]);
   const [selectedReseller, setSelectedReseller] = useState('');
   const [amount, setAmount] = useState(0);
@@ -26,32 +26,21 @@ export default function Transferir() {
   const [loadingResellers, setLoadingResellers] = useState(true);
 
   useEffect(() => {
-    if (user && role === 'master') {
+    if (admin && role === 'master') {
       fetchResellers();
     }
-  }, [user, role]);
+  }, [admin, role]);
 
   const fetchResellers = async () => {
     try {
-      const { data: relationships } = await supabase
-        .from('reseller_relationships')
-        .select('reseller_id')
-        .eq('master_id', user!.id);
+      // Get resellers created by this master
+      const { data } = await supabase
+        .from('admins')
+        .select('id, email, nome')
+        .eq('criado_por', admin!.id)
+        .eq('rank', 'revendedor');
 
-      if (!relationships?.length) {
-        setResellers([]);
-        setLoadingResellers(false);
-        return;
-      }
-
-      const resellerIds = relationships.map(r => r.reseller_id);
-
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('id, email, name')
-        .in('id', resellerIds);
-
-      setResellers(profiles || []);
+      setResellers(data || []);
     } catch (error) {
       console.error('Error fetching resellers:', error);
     } finally {
@@ -67,7 +56,7 @@ export default function Transferir() {
     );
   }
 
-  if (!user) {
+  if (!admin) {
     return <Navigate to="/login" replace />;
   }
 
@@ -90,9 +79,9 @@ export default function Transferir() {
 
     try {
       const { data, error } = await supabase.rpc('transfer_credits', {
-        _from_user_id: user.id,
-        _to_user_id: selectedReseller,
-        _amount: amount
+        p_from_admin_id: admin.id,
+        p_to_admin_id: parseInt(selectedReseller),
+        p_amount: amount
       });
 
       if (error) throw error;
@@ -168,8 +157,8 @@ export default function Transferir() {
                     </SelectTrigger>
                     <SelectContent>
                       {resellers.map((reseller) => (
-                        <SelectItem key={reseller.id} value={reseller.id}>
-                          {reseller.name || reseller.email}
+                        <SelectItem key={reseller.id} value={reseller.id.toString()}>
+                          {reseller.nome || reseller.email}
                         </SelectItem>
                       ))}
                     </SelectContent>

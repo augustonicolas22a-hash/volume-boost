@@ -115,6 +115,50 @@ export type Database = {
           },
         ]
       }
+      pix_payments: {
+        Row: {
+          admin_id: number
+          admin_name: string
+          amount: number
+          created_at: string | null
+          credits: number
+          id: number
+          paid_at: string | null
+          status: string
+          transaction_id: string
+        }
+        Insert: {
+          admin_id: number
+          admin_name: string
+          amount: number
+          created_at?: string | null
+          credits: number
+          id?: number
+          paid_at?: string | null
+          status?: string
+          transaction_id: string
+        }
+        Update: {
+          admin_id?: number
+          admin_name?: string
+          amount?: number
+          created_at?: string | null
+          credits?: number
+          id?: number
+          paid_at?: string | null
+          status?: string
+          transaction_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pix_payments_admin_id_fkey"
+            columns: ["admin_id"]
+            isOneToOne: false
+            referencedRelation: "admins"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
