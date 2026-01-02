@@ -10,13 +10,14 @@ import {
   Send,
   Crown,
   Shield,
-  Menu,
-  X
+  Menu
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
 import { Link, useLocation } from 'react-router-dom';
 import { useState } from 'react';
+import { ThemeToggle } from '@/components/ThemeToggle';
+import logo from '@/assets/logo.png';
 
 interface NavItem {
   label: string;
@@ -64,68 +65,77 @@ export function MobileNav() {
   return (
     <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-card border-b border-border">
       <div className="flex items-center justify-between p-4">
-        <div>
-          <h1 className="text-lg font-bold text-primary">Data Sistemas</h1>
-          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-            {getRoleIcon()}
-            <span>{getRoleLabel()}</span>
+        <div className="flex items-center gap-3">
+          <img src={logo} alt="Data Sistemas" className="h-8 w-8 dark:invert" />
+          <div>
+            <h1 className="text-lg font-bold text-primary">Data Sistemas</h1>
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              {getRoleIcon()}
+              <span>{getRoleLabel()}</span>
+            </div>
           </div>
         </div>
         
-        <Sheet open={open} onOpenChange={setOpen}>
-          <SheetTrigger asChild>
-            <Button variant="ghost" size="icon">
-              <Menu className="h-6 w-6" />
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="right" className="w-72 p-0">
-            <div className="flex flex-col h-full">
-              <div className="p-6 border-b border-border">
-                <h1 className="text-xl font-bold text-primary">Data Sistemas</h1>
-                <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
-                  {getRoleIcon()}
-                  <span>{getRoleLabel()}</span>
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+          <Sheet open={open} onOpenChange={setOpen}>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <Menu className="h-6 w-6" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-72 p-0">
+              <div className="flex flex-col h-full">
+                <div className="p-6 border-b border-border">
+                  <div className="flex items-center gap-3">
+                    <img src={logo} alt="Data Sistemas" className="h-10 w-10 dark:invert" />
+                    <h1 className="text-xl font-bold text-primary">Data Sistemas</h1>
+                  </div>
+                  <div className="flex items-center gap-2 mt-3 text-sm text-muted-foreground">
+                    {getRoleIcon()}
+                    <span>{getRoleLabel()}</span>
+                  </div>
+                </div>
+
+                <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+                  {filteredItems.map((item) => (
+                    <SheetClose asChild key={item.href}>
+                      <Link to={item.href}>
+                        <Button
+                          variant="ghost"
+                          className={cn(
+                            'w-full justify-start gap-3 h-11',
+                            location.pathname === item.href && 'bg-primary/10 text-primary'
+                          )}
+                        >
+                          <item.icon className="h-5 w-5" />
+                          {item.label}
+                        </Button>
+                      </Link>
+                    </SheetClose>
+                  ))}
+                </nav>
+
+                <div className="p-4 border-t border-border mt-auto">
+                  <div className="text-sm text-muted-foreground mb-3 truncate">
+                    {admin?.email}
+                  </div>
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-start gap-3 text-destructive hover:text-destructive hover:bg-destructive/10"
+                    onClick={() => {
+                      setOpen(false);
+                      signOut();
+                    }}
+                  >
+                    <LogOut className="h-5 w-5" />
+                    Sair
+                  </Button>
                 </div>
               </div>
-
-              <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-                {filteredItems.map((item) => (
-                  <SheetClose asChild key={item.href}>
-                    <Link to={item.href}>
-                      <Button
-                        variant="ghost"
-                        className={cn(
-                          'w-full justify-start gap-3 h-11',
-                          location.pathname === item.href && 'bg-primary/10 text-primary'
-                        )}
-                      >
-                        <item.icon className="h-5 w-5" />
-                        {item.label}
-                      </Button>
-                    </Link>
-                  </SheetClose>
-                ))}
-              </nav>
-
-              <div className="p-4 border-t border-border mt-auto">
-                <div className="text-sm text-muted-foreground mb-3 truncate">
-                  {admin?.email}
-                </div>
-                <Button
-                  variant="ghost"
-                  className="w-full justify-start gap-3 text-destructive hover:text-destructive hover:bg-destructive/10"
-                  onClick={() => {
-                    setOpen(false);
-                    signOut();
-                  }}
-                >
-                  <LogOut className="h-5 w-5" />
-                  Sair
-                </Button>
-              </div>
-            </div>
-          </SheetContent>
-        </Sheet>
+            </SheetContent>
+          </Sheet>
+        </div>
       </div>
     </div>
   );
