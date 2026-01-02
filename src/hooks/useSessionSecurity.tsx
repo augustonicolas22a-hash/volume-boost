@@ -9,37 +9,6 @@ export function useSessionSecurity() {
   useEffect(() => {
     if (!admin) return;
 
-    // Detect DevTools opening - logout immediately
-    const detectDevTools = () => {
-      const threshold = 160;
-      const widthThreshold = window.outerWidth - window.innerWidth > threshold;
-      const heightThreshold = window.outerHeight - window.innerHeight > threshold;
-      
-      if (widthThreshold || heightThreshold) {
-        console.clear();
-        signOut();
-        window.location.href = '/login';
-      }
-    };
-
-    // Check for DevTools on resize
-    window.addEventListener('resize', detectDevTools);
-
-    // Check devtools via debugger timing
-    const checkDevTools = () => {
-      const start = performance.now();
-      // This gets slower when DevTools is open
-      for (let i = 0; i < 100; i++) {
-        console.log(i);
-        console.clear();
-      }
-      const end = performance.now();
-      if (end - start > 100) {
-        signOut();
-        window.location.href = '/login';
-      }
-    };
-
     // Disable right-click
     const disableRightClick = (e: MouseEvent) => {
       e.preventDefault();
@@ -94,14 +63,10 @@ export function useSessionSecurity() {
     document.addEventListener('contextmenu', disableRightClick);
     document.addEventListener('keydown', disableDevKeys);
 
-    // Run initial check
-    detectDevTools();
-
     // Check session every 5 seconds
     checkIntervalRef.current = setInterval(validateSession, 5000);
 
     return () => {
-      window.removeEventListener('resize', detectDevTools);
       document.removeEventListener('contextmenu', disableRightClick);
       document.removeEventListener('keydown', disableDevKeys);
       if (checkIntervalRef.current) {
