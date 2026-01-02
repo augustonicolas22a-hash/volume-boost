@@ -3,10 +3,10 @@ import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
-import logo from '@/assets/logo.png';
+import { Logo } from '@/components/Logo';
 
 export function LoginForm() {
   const { signIn } = useAuth();
@@ -35,7 +35,7 @@ export function LoginForm() {
     <Card className="w-full max-w-md shadow-lg border-0">
       <CardHeader className="space-y-4 text-center">
         <div className="flex justify-center">
-          <img src={logo} alt="Data Sistemas" className="h-20 w-20 dark:invert" />
+          <Logo className="h-20 w-20" />
         </div>
         <CardDescription className="text-base">Inovando e Recriando o Futuro Digital</CardDescription>
       </CardHeader>

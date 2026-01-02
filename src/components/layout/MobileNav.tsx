@@ -17,7 +17,7 @@ import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/s
 import { Link, useLocation } from 'react-router-dom';
 import { useState } from 'react';
 import { ThemeToggle } from '@/components/ThemeToggle';
-import logo from '@/assets/logo.png';
+import { Logo } from '@/components/Logo';
 
 interface NavItem {
   label: string;
@@ -66,7 +66,7 @@ export function MobileNav() {
     <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-card border-b border-border">
       <div className="flex items-center justify-between p-4">
         <div className="flex items-center gap-3">
-          <img src={logo} alt="Data Sistemas" className="h-8 w-8 dark:invert" />
+          <Logo className="h-8 w-8" />
           <div>
             <h1 className="text-lg font-bold text-primary">Data Sistemas</h1>
             <div className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -88,7 +88,7 @@ export function MobileNav() {
               <div className="flex flex-col h-full">
                 <div className="p-6 border-b border-border">
                   <div className="flex items-center gap-3">
-                    <img src={logo} alt="Data Sistemas" className="h-10 w-10 dark:invert" />
+                    <Logo className="h-10 w-10" />
                     <h1 className="text-xl font-bold text-primary">Data Sistemas</h1>
                   </div>
                   <div className="flex items-center gap-2 mt-3 text-sm text-muted-foreground">
