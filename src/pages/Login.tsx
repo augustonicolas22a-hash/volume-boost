@@ -3,7 +3,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Navigate } from 'react-router-dom';
 
 export default function Login() {
-  const { user, loading } = useAuth();
+  const { admin, loading } = useAuth();
 
   if (loading) {
     return (
@@ -13,7 +13,7 @@ export default function Login() {
     );
   }
 
-  if (user) {
+  if (admin) {
     return <Navigate to="/dashboard" replace />;
   }
 

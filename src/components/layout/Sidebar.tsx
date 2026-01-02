@@ -5,7 +5,6 @@ import {
   CreditCard, 
   Users, 
   BarChart3, 
-  Settings, 
   LogOut,
   UserPlus,
   Send,
@@ -33,7 +32,7 @@ const navItems: NavItem[] = [
 ];
 
 export function Sidebar() {
-  const { role, signOut, user } = useAuth();
+  const { role, signOut, admin } = useAuth();
   const location = useLocation();
 
   const filteredItems = navItems.filter(item => 
@@ -86,7 +85,7 @@ export function Sidebar() {
 
       <div className="p-4 border-t border-border">
         <div className="text-sm text-muted-foreground mb-3 truncate">
-          {user?.email}
+          {admin?.email}
         </div>
         <Button
           variant="ghost"

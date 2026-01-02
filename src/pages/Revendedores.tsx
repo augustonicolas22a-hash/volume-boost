@@ -9,55 +9,35 @@ import { supabase } from '@/integrations/supabase/client';
 import { Users, CreditCard } from 'lucide-react';
 
 interface Reseller {
-  id: string;
+  id: number;
   email: string;
-  name: string | null;
-  balance: number;
+  nome: string;
+  creditos: number;
   created_at: string;
 }
 
 export default function Revendedores() {
-  const { user, role, loading } = useAuth();
+  const { admin, role, loading } = useAuth();
   const [resellers, setResellers] = useState<Reseller[]>([]);
   const [loadingData, setLoadingData] = useState(true);
 
   useEffect(() => {
-    if (user && role === 'master') {
+    if (admin && role === 'master') {
       fetchResellers();
     }
-  }, [user, role]);
+  }, [admin, role]);
 
   const fetchResellers = async () => {
     try {
-      const { data: relationships } = await supabase
-        .from('reseller_relationships')
-        .select('reseller_id')
-        .eq('master_id', user!.id);
+      // Get resellers created by this master
+      const { data } = await supabase
+        .from('admins')
+        .select('id, email, nome, creditos, created_at')
+        .eq('criado_por', admin!.id)
+        .eq('rank', 'revendedor')
+        .order('created_at', { ascending: false });
 
-      if (!relationships?.length) {
-        setResellers([]);
-        setLoadingData(false);
-        return;
-      }
-
-      const resellerIds = relationships.map(r => r.reseller_id);
-
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('id, email, name, created_at')
-        .in('id', resellerIds);
-
-      const { data: credits } = await supabase
-        .from('credits')
-        .select('user_id, balance')
-        .in('user_id', resellerIds);
-
-      const combined = profiles?.map(profile => ({
-        ...profile,
-        balance: credits?.find(c => c.user_id === profile.id)?.balance || 0
-      })) || [];
-
-      setResellers(combined);
+      setResellers(data || []);
     } catch (error) {
       console.error('Error fetching resellers:', error);
     } finally {
@@ -73,7 +53,7 @@ export default function Revendedores() {
     );
   }
 
-  if (!user) {
+  if (!admin) {
     return <Navigate to="/login" replace />;
   }
 
@@ -126,13 +106,13 @@ export default function Revendedores() {
                   {resellers.map((reseller) => (
                     <TableRow key={reseller.id}>
                       <TableCell className="font-medium">
-                        {reseller.name || '-'}
+                        {reseller.nome || '-'}
                       </TableCell>
                       <TableCell>{reseller.email}</TableCell>
                       <TableCell>
                         <Badge variant="outline" className="gap-1">
                           <CreditCard className="h-3 w-3" />
-                          {reseller.balance}
+                          {reseller.creditos}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-muted-foreground">

@@ -1,1 +1,10 @@
 project_id = "jfdicaamcralxtmvqcag"
+
+[functions.create-pix-payment]
+verify_jwt = false
+
+[functions.vizzionpay-webhook]
+verify_jwt = false
+
+[functions.check-payment-status]
+verify_jwt = false
