@@ -2,6 +2,7 @@ import { ReactNode } from 'react';
 import { Sidebar } from './Sidebar';
 import { MobileNav } from './MobileNav';
 import { useSessionSecurity } from '@/hooks/useSessionSecurity';
+import { useCreditNotifications } from '@/hooks/useCreditNotifications';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -10,6 +11,9 @@ interface DashboardLayoutProps {
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   // Apply security hooks
   useSessionSecurity();
+  
+  // Listen for credit notifications
+  useCreditNotifications();
 
   return (
     <div className="min-h-screen bg-background">
