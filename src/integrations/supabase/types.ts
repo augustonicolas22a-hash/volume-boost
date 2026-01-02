@@ -14,13 +14,66 @@ export type Database = {
   }
   public: {
     Tables: {
+      admins: {
+        Row: {
+          created_at: string | null
+          creditos: number
+          criado_por: number | null
+          email: string
+          id: number
+          ip_address: string | null
+          key: string
+          last_active: string | null
+          nome: string
+          profile_photo: string | null
+          rank: string | null
+          session_token: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          creditos?: number
+          criado_por?: number | null
+          email: string
+          id?: number
+          ip_address?: string | null
+          key: string
+          last_active?: string | null
+          nome: string
+          profile_photo?: string | null
+          rank?: string | null
+          session_token?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          creditos?: number
+          criado_por?: number | null
+          email?: string
+          id?: number
+          ip_address?: string | null
+          key?: string
+          last_active?: string | null
+          nome?: string
+          profile_photo?: string | null
+          rank?: string | null
+          session_token?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admins_criado_por_fkey"
+            columns: ["criado_por"]
+            isOneToOne: false
+            referencedRelation: "admins"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       credit_transactions: {
         Row: {
           amount: number
           created_at: string | null
-          from_user_id: string | null
-          id: string
-          to_user_id: string
+          from_admin_id: number | null
+          id: number
+          to_admin_id: number
           total_price: number | null
           transaction_type: string
           unit_price: number | null
@@ -28,9 +81,9 @@ export type Database = {
         Insert: {
           amount: number
           created_at?: string | null
-          from_user_id?: string | null
-          id?: string
-          to_user_id: string
+          from_admin_id?: number | null
+          id?: number
+          to_admin_id: number
           total_price?: number | null
           transaction_type: string
           unit_price?: number | null
@@ -38,137 +91,66 @@ export type Database = {
         Update: {
           amount?: number
           created_at?: string | null
-          from_user_id?: string | null
-          id?: string
-          to_user_id?: string
+          from_admin_id?: number | null
+          id?: number
+          to_admin_id?: number
           total_price?: number | null
           transaction_type?: string
           unit_price?: number | null
         }
-        Relationships: []
-      }
-      credits: {
-        Row: {
-          balance: number | null
-          id: string
-          updated_at: string | null
-          user_id: string
-        }
-        Insert: {
-          balance?: number | null
-          id?: string
-          updated_at?: string | null
-          user_id: string
-        }
-        Update: {
-          balance?: number | null
-          id?: string
-          updated_at?: string | null
-          user_id?: string
-        }
-        Relationships: []
-      }
-      profiles: {
-        Row: {
-          created_at: string | null
-          email: string
-          id: string
-          name: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          email: string
-          id: string
-          name?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          email?: string
-          id?: string
-          name?: string | null
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
-      reseller_relationships: {
-        Row: {
-          created_at: string | null
-          id: string
-          master_id: string
-          reseller_id: string
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          master_id: string
-          reseller_id: string
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          master_id?: string
-          reseller_id?: string
-        }
-        Relationships: []
-      }
-      user_roles: {
-        Row: {
-          created_at: string | null
-          created_by: string | null
-          id: string
-          role: Database["public"]["Enums"]["app_role"]
-          user_id: string
-        }
-        Insert: {
-          created_at?: string | null
-          created_by?: string | null
-          id?: string
-          role: Database["public"]["Enums"]["app_role"]
-          user_id: string
-        }
-        Update: {
-          created_at?: string | null
-          created_by?: string | null
-          id?: string
-          role?: Database["public"]["Enums"]["app_role"]
-          user_id?: string
-        }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "credit_transactions_from_admin_id_fkey"
+            columns: ["from_admin_id"]
+            isOneToOne: false
+            referencedRelation: "admins"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_transactions_to_admin_id_fkey"
+            columns: ["to_admin_id"]
+            isOneToOne: false
+            referencedRelation: "admins"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      get_user_role: {
-        Args: { _user_id: string }
-        Returns: Database["public"]["Enums"]["app_role"]
-      }
-      has_role: {
-        Args: {
-          _role: Database["public"]["Enums"]["app_role"]
-          _user_id: string
-        }
-        Returns: boolean
-      }
       recharge_credits: {
         Args: {
-          _amount: number
-          _total_price: number
-          _unit_price: number
-          _user_id: string
+          p_admin_id: number
+          p_amount: number
+          p_total_price: number
+          p_unit_price: number
         }
         Returns: boolean
       }
       transfer_credits: {
-        Args: { _amount: number; _from_user_id: string; _to_user_id: string }
+        Args: {
+          p_amount: number
+          p_from_admin_id: number
+          p_to_admin_id: number
+        }
         Returns: boolean
+      }
+      validate_login: {
+        Args: { p_email: string; p_key: string }
+        Returns: {
+          creditos: number
+          email: string
+          id: number
+          nome: string
+          profile_photo: string
+          rank: string
+        }[]
       }
     }
     Enums: {
-      app_role: "dono" | "master" | "revendedor"
+      [_ in never]: never
     }
     CompositeTypes: {
       [_ in never]: never
@@ -295,8 +277,6 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {
-      app_role: ["dono", "master", "revendedor"],
-    },
+    Enums: {},
   },
 } as const
