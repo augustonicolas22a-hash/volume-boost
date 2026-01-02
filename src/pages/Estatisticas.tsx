@@ -27,8 +27,10 @@ interface Transaction {
   transaction_type: string;
   total_price: number | null;
   created_at: string;
-  from_admin?: { nome: string } | null;
-  to_admin?: { nome: string } | null;
+  from_admin_id: number | null;
+  to_admin_id: number;
+  from_admin_name?: string;
+  to_admin_name?: string;
 }
 
 export default function Estatisticas() {
@@ -72,6 +74,26 @@ export default function Estatisticas() {
         .order('created_at', { ascending: false })
         .limit(10);
 
+      // Fetch admin names for transactions
+      const adminIds = new Set<number>();
+      txData?.forEach(tx => {
+        if (tx.from_admin_id) adminIds.add(tx.from_admin_id);
+        if (tx.to_admin_id) adminIds.add(tx.to_admin_id);
+      });
+
+      const { data: adminsNames } = await supabase
+        .from('admins')
+        .select('id, nome')
+        .in('id', Array.from(adminIds));
+
+      const adminMap = new Map(adminsNames?.map(a => [a.id, a.nome]) || []);
+
+      const transactionsWithNames = txData?.map(tx => ({
+        ...tx,
+        from_admin_name: tx.from_admin_id ? adminMap.get(tx.from_admin_id) : undefined,
+        to_admin_name: adminMap.get(tx.to_admin_id)
+      })) || [];
+
       setStats({
         totalMasters: mastersCount || 0,
         totalResellers: resellersCount || 0,
@@ -79,7 +101,7 @@ export default function Estatisticas() {
         totalTransactions: txCount || 0
       });
 
-      setTransactions(txData || []);
+      setTransactions(transactionsWithNames);
     } catch (error) {
       console.error('Error fetching stats:', error);
     } finally {
@@ -187,6 +209,8 @@ export default function Estatisticas() {
                       <TableHeader>
                         <TableRow>
                           <TableHead>Tipo</TableHead>
+                          <TableHead>De</TableHead>
+                          <TableHead>Para</TableHead>
                           <TableHead>Quantidade</TableHead>
                           <TableHead>Valor</TableHead>
                           <TableHead>Data</TableHead>
@@ -209,6 +233,12 @@ export default function Estatisticas() {
                                   </>
                                 )}
                               </Badge>
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {tx.from_admin_name || (tx.transaction_type === 'recharge' ? 'Sistema' : '-')}
+                            </TableCell>
+                            <TableCell className="font-medium">
+                              {tx.to_admin_name || '-'}
                             </TableCell>
                             <TableCell className="font-medium">
                               {tx.amount.toLocaleString('pt-BR')} créditos
