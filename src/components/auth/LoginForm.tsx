@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
+import logo from '@/assets/logo.png';
 
 export function LoginForm() {
   const { signIn } = useAuth();
@@ -32,9 +33,11 @@ export function LoginForm() {
 
   return (
     <Card className="w-full max-w-md shadow-lg border-0">
-      <CardHeader className="space-y-1 text-center">
-        <CardTitle className="text-2xl font-bold">Entrar</CardTitle>
-        <CardDescription>Digite suas credenciais para acessar o painel</CardDescription>
+      <CardHeader className="space-y-4 text-center">
+        <div className="flex justify-center">
+          <img src={logo} alt="Data Sistemas" className="h-20 w-20 dark:invert" />
+        </div>
+        <CardDescription className="text-base">Inovando e Recriando o Futuro Digital</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">

@@ -115,6 +115,33 @@ export type Database = {
           },
         ]
       }
+      monthly_goals: {
+        Row: {
+          created_at: string
+          id: number
+          month: number
+          target_revenue: number
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          month: number
+          target_revenue?: number
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          month?: number
+          target_revenue?: number
+          updated_at?: string
+          year?: number
+        }
+        Relationships: []
+      }
       pix_payments: {
         Row: {
           admin_id: number
@@ -158,6 +185,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      price_tiers: {
+        Row: {
+          created_at: string
+          id: number
+          is_active: boolean
+          max_qty: number | null
+          min_qty: number
+          price: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          is_active?: boolean
+          max_qty?: number | null
+          min_qty: number
+          price: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          is_active?: boolean
+          max_qty?: number | null
+          min_qty?: number
+          price?: number
+          updated_at?: string
+        }
+        Relationships: []
       }
     }
     Views: {

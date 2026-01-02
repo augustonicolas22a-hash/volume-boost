@@ -13,6 +13,8 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Link, useLocation } from 'react-router-dom';
+import { ThemeToggle } from '@/components/ThemeToggle';
+import logo from '@/assets/logo.png';
 
 interface NavItem {
   label: string;
@@ -59,8 +61,14 @@ export function Sidebar() {
   return (
     <aside className="fixed left-0 top-0 h-screen w-64 bg-card border-r border-border flex flex-col">
       <div className="p-6 border-b border-border">
-        <h1 className="text-xl font-bold text-primary">Data Sistemas</h1>
-        <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <img src={logo} alt="Data Sistemas" className="h-10 w-10 dark:invert" />
+            <h1 className="text-xl font-bold text-primary">Data Sistemas</h1>
+          </div>
+          <ThemeToggle />
+        </div>
+        <div className="flex items-center gap-2 mt-3 text-sm text-muted-foreground">
           {getRoleIcon()}
           <span>{getRoleLabel()}</span>
         </div>
