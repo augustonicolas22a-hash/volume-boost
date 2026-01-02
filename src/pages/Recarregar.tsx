@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,6 +11,7 @@ import { Navigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { CreditCard, Tag, Calculator, QrCode, Loader2, Clock, CheckCircle, XCircle } from 'lucide-react';
+import ReactCanvasConfetti from 'react-canvas-confetti';
 
 const PRICE_TIERS = [
   { minQty: 1, maxQty: 9, price: 1 }, // Preço de teste - R$1 por crédito
@@ -37,13 +38,83 @@ function calculatePrice(quantity: number): { unitPrice: number; total: number } 
 
 export default function Recarregar() {
   const { admin, role, loading, refreshCredits } = useAuth();
-  const [quantity, setQuantity] = useState(200);
+  const [quantity, setQuantity] = useState(1);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showPixModal, setShowPixModal] = useState(false);
   const [pixData, setPixData] = useState<PixPayment | null>(null);
   const [paymentConfirmed, setPaymentConfirmed] = useState(false);
   const [paymentExpired, setPaymentExpired] = useState(false);
-  const [timeRemaining, setTimeRemaining] = useState(600);
+  const [checkingPayment, setCheckingPayment] = useState(false);
+  const [timeRemaining, setTimeRemaining] = useState(600); // 10 minutos
+
+  // Confetti ref
+  const refAnimationInstance = useRef<any>(null);
+
+  const getInstance = (instance: any) => {
+    refAnimationInstance.current = instance;
+  };
+
+  const makeShot = (particleRatio: number, opts: any) => {
+    refAnimationInstance.current &&
+      refAnimationInstance.current({
+        ...opts,
+        origin: { y: 0.7 },
+        particleCount: Math.floor(200 * particleRatio),
+      });
+  };
+
+  const fire = () => {
+    makeShot(0.25, { spread: 26, startVelocity: 55 });
+    makeShot(0.2, { spread: 60 });
+    makeShot(0.35, { spread: 100, decay: 0.91, scalar: 0.8 });
+    makeShot(0.1, { spread: 120, startVelocity: 25, decay: 0.92, scalar: 1.2 });
+    makeShot(0.1, { spread: 120, startVelocity: 45 });
+  };
+
+  // Play notification sound
+  const playNotificationSound = () => {
+    try {
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      oscillator.frequency.value = 800;
+      oscillator.type = 'sine';
+      
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+      
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.5);
+    } catch (error) {
+      console.log('Erro ao tocar som:', error);
+    }
+  };
+
+  // Timer countdown
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    
+    if (showPixModal && !paymentConfirmed && !paymentExpired && timeRemaining > 0) {
+      timer = setInterval(() => {
+        setTimeRemaining(prev => {
+          if (prev <= 1) {
+            setPaymentExpired(true);
+            setCheckingPayment(false);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [showPixModal, paymentConfirmed, paymentExpired, timeRemaining]);
 
   if (loading) {
     return (
@@ -76,6 +147,7 @@ export default function Recarregar() {
       });
 
       if (response.error) throw response.error;
+      if (response.data?.error) throw new Error(response.data.details || response.data.error);
 
       const pixPayment = response.data;
       setPixData(pixPayment);
@@ -83,6 +155,7 @@ export default function Recarregar() {
       setPaymentConfirmed(false);
       setPaymentExpired(false);
       setTimeRemaining(600);
+      setCheckingPayment(true);
 
       // Start payment verification
       startPaymentVerification(pixPayment.transactionId);
@@ -102,16 +175,29 @@ export default function Recarregar() {
   const startPaymentVerification = (transactionId: string) => {
     const checkPayment = async () => {
       try {
-        const response = await supabase.functions.invoke('check-payment-status', {
-          body: { transactionId }
-        });
+        // Query directly from database for faster response
+        const { data: payment } = await supabase
+          .from('pix_payments')
+          .select('status, credits')
+          .eq('transaction_id', transactionId)
+          .single();
 
-        if (response.data?.status === 'PAID') {
+        if (payment?.status === 'PAID') {
           setPaymentConfirmed(true);
+          setCheckingPayment(false);
+          
+          // Play sound and fire confetti
+          playNotificationSound();
+          fire();
+          
+          // Update credits
           await refreshCredits();
+          
           toast.success('Pagamento confirmado!', {
-            description: `${quantity} créditos adicionados à sua conta`
+            description: `${payment.credits} créditos adicionados à sua conta`
           });
+
+          // Close modal after 3 seconds
           setTimeout(() => {
             setShowPixModal(false);
             setPixData(null);
@@ -122,7 +208,8 @@ export default function Recarregar() {
         console.log('Erro ao verificar pagamento:', error);
       }
 
-      if (!paymentConfirmed && !paymentExpired && timeRemaining > 0) {
+      // Continue checking if not paid yet
+      if (!paymentConfirmed && !paymentExpired) {
         setTimeout(checkPayment, 3000);
       }
     };
@@ -218,7 +305,12 @@ export default function Recarregar() {
         </div>
       </div>
 
-      <Dialog open={showPixModal} onOpenChange={setShowPixModal}>
+      <Dialog open={showPixModal} onOpenChange={(open) => {
+        if (!open) {
+          setCheckingPayment(false);
+        }
+        setShowPixModal(open);
+      }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Pagamento PIX</DialogTitle>
@@ -226,42 +318,103 @@ export default function Recarregar() {
           
           {!paymentConfirmed && !paymentExpired && (
             <div className="space-y-4">
+              {/* Timer */}
               <div className="text-center">
-                <div className="text-2xl font-bold text-orange-600">{formatTime(timeRemaining)}</div>
-                <p className="text-sm text-muted-foreground">Tempo restante</p>
+                <div className={`text-3xl font-bold ${timeRemaining < 60 ? 'text-red-600' : 'text-orange-600'}`}>
+                  <Clock className="inline-block mr-2 h-6 w-6" />
+                  {formatTime(timeRemaining)}
+                </div>
+                <p className="text-sm text-muted-foreground mt-1">Tempo restante para pagamento</p>
               </div>
 
+              {/* QR Code */}
               {pixData?.qrCodeBase64 && (
-                <img src={`data:image/png;base64,${pixData.qrCodeBase64}`} alt="QR Code PIX" className="mx-auto max-w-[200px] border rounded-lg" />
+                <div className="text-center">
+                  <img 
+                    src={`data:image/png;base64,${pixData.qrCodeBase64}`} 
+                    alt="QR Code PIX" 
+                    className="mx-auto max-w-[200px] border rounded-lg"
+                  />
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Escaneie o QR Code com seu app de banco
+                  </p>
+                </div>
               )}
 
+              {/* PIX Code */}
               <div className="space-y-2">
-                <Label>Código PIX:</Label>
+                <Label>Código PIX (Copia e Cola):</Label>
                 <div className="flex gap-2">
                   <Input value={pixData?.qrCode || ""} readOnly className="text-xs" />
                   <Button onClick={copyPixCode} size="sm">Copiar</Button>
                 </div>
               </div>
+
+              {/* Instructions */}
+              <div className="bg-blue-50 dark:bg-blue-950/20 p-4 rounded-lg">
+                <h4 className="font-medium mb-2">Como pagar:</h4>
+                <ol className="text-sm space-y-1 list-decimal list-inside text-muted-foreground">
+                  <li>Abra o app do seu banco</li>
+                  <li>Escaneie o QR Code ou cole o código PIX</li>
+                  <li>Confirme o pagamento</li>
+                  <li>Aguarde a confirmação automática</li>
+                </ol>
+              </div>
+
+              {/* Verification status */}
+              {checkingPayment && (
+                <div className="text-center py-2">
+                  <div className="flex items-center justify-center space-x-2 text-primary">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span className="text-sm">Verificando pagamento...</span>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
           {paymentConfirmed && (
             <div className="text-center py-6">
-              <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-green-700">Pagamento Confirmado!</h3>
-              <p className="text-green-600">{quantity} créditos adicionados</p>
+              <div className="bg-green-50 dark:bg-green-950/20 p-6 rounded-lg border border-green-200 dark:border-green-800">
+                <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-green-700 dark:text-green-300">Pagamento Confirmado!</h3>
+                <p className="text-green-600 dark:text-green-400">{quantity} créditos adicionados à sua conta</p>
+              </div>
             </div>
           )}
 
           {paymentExpired && (
             <div className="text-center py-6">
-              <XCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-red-700">Pagamento Expirado</h3>
-              <Button onClick={() => { setShowPixModal(false); setPaymentExpired(false); }}>Tentar Novamente</Button>
+              <div className="bg-red-50 dark:bg-red-950/20 p-6 rounded-lg border border-red-200 dark:border-red-800">
+                <XCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-red-700 dark:text-red-300">Pagamento Expirado</h3>
+                <p className="text-red-600 dark:text-red-400 mb-4">O tempo para pagamento expirou</p>
+                <Button onClick={() => { 
+                  setShowPixModal(false); 
+                  setPaymentExpired(false);
+                  setPixData(null);
+                }}>
+                  Tentar Novamente
+                </Button>
+              </div>
             </div>
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Confetti Canvas */}
+      <ReactCanvasConfetti
+        onInit={getInstance}
+        style={{
+          position: 'fixed',
+          pointerEvents: 'none',
+          width: '100%',
+          height: '100%',
+          top: 0,
+          left: 0,
+          zIndex: 9999,
+        }}
+      />
     </DashboardLayout>
   );
 }
