@@ -3,26 +3,24 @@ import { useAuth } from '@/hooks/useAuth';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Navigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { CreditCard, Tag, Calculator, QrCode, Loader2, Clock, CheckCircle, XCircle, History, RefreshCw } from 'lucide-react';
+import { CreditCard, Tag, QrCode, Loader2, Clock, CheckCircle, XCircle, History, RefreshCw } from 'lucide-react';
 import ReactCanvasConfetti from 'react-canvas-confetti';
 
-const PRICE_TIERS = [
-  { minQty: 1, maxQty: 9, price: 1 },
-  { minQty: 10, maxQty: 99, price: 14 },
-  { minQty: 100, maxQty: 199, price: 13 },
-  { minQty: 200, maxQty: 299, price: 12 },
-  { minQty: 300, maxQty: 399, price: 11 },
-  { minQty: 400, maxQty: 499, price: 10.5 },
-  { minQty: 500, maxQty: 999, price: 10 },
-  { minQty: 1000, maxQty: Infinity, price: 9.5 },
+// Fixed credit packages - NO custom input allowed
+const CREDIT_PACKAGES = [
+  { credits: 10, unitPrice: 14, total: 140 },
+  { credits: 25, unitPrice: 13.5, total: 337.5 },
+  { credits: 50, unitPrice: 13, total: 650 },
+  { credits: 100, unitPrice: 12.5, total: 1250 },
+  { credits: 150, unitPrice: 12, total: 1800 },
+  { credits: 200, unitPrice: 11.5, total: 2300 },
+  { credits: 250, unitPrice: 11, total: 2750 },
 ];
 
 interface PixPayment {
@@ -40,15 +38,9 @@ interface PaymentHistory {
   paid_at: string | null;
 }
 
-function calculatePrice(quantity: number): { unitPrice: number; total: number } {
-  const tier = PRICE_TIERS.find(t => quantity >= t.minQty && quantity <= t.maxQty);
-  const unitPrice = tier?.price || 14;
-  return { unitPrice, total: quantity * unitPrice };
-}
-
 export default function Recarregar() {
-  const { admin, role, credits, loading, refreshCredits, updateAdmin } = useAuth();
-  const [quantity, setQuantity] = useState(1);
+  const { admin, role, credits, loading, updateAdmin } = useAuth();
+  const [selectedPackage, setSelectedPackage] = useState<typeof CREDIT_PACKAGES[0] | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showPixModal, setShowPixModal] = useState(false);
   const [pixData, setPixData] = useState<PixPayment | null>(null);
@@ -59,15 +51,12 @@ export default function Recarregar() {
   const [paymentHistory, setPaymentHistory] = useState<PaymentHistory[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(true);
 
-  // Refs to prevent multiple sounds/confetti
   const hasPlayedSound = useRef(false);
   const checkIntervalRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Confetti ref
   const refAnimationInstance = useRef<any>(null);
 
-  const getInstance = useCallback((instance: any) => {
-    refAnimationInstance.current = instance;
+  const handleInit = useCallback(({ confetti }: { confetti: any }) => {
+    refAnimationInstance.current = confetti;
   }, []);
 
   const fire = useCallback(() => {
@@ -88,7 +77,6 @@ export default function Recarregar() {
     makeShot(0.1, { spread: 120, startVelocity: 45 });
   }, []);
 
-  // Play notification sound - only once
   const playNotificationSound = useCallback(() => {
     if (hasPlayedSound.current) return;
     hasPlayedSound.current = true;
@@ -114,7 +102,6 @@ export default function Recarregar() {
     }
   }, []);
 
-  // Fetch payment history
   const fetchPaymentHistory = useCallback(async () => {
     if (!admin) return;
     
@@ -140,7 +127,6 @@ export default function Recarregar() {
     }
   }, [admin, fetchPaymentHistory]);
 
-  // Timer countdown
   useEffect(() => {
     let timer: NodeJS.Timeout;
     
@@ -165,7 +151,6 @@ export default function Recarregar() {
     };
   }, [showPixModal, paymentConfirmed, paymentExpired, timeRemaining]);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (checkIntervalRef.current) {
@@ -190,19 +175,26 @@ export default function Recarregar() {
     return <Navigate to="/dashboard" replace />;
   }
 
-  const { unitPrice, total } = calculatePrice(quantity);
+  const handleSelectPackage = (pkg: typeof CREDIT_PACKAGES[0]) => {
+    setSelectedPackage(pkg);
+  };
 
   const handleRecharge = async () => {
+    if (!selectedPackage || !admin?.session_token) {
+      toast.error('Selecione um pacote de créditos');
+      return;
+    }
+
     setIsProcessing(true);
-    hasPlayedSound.current = false; // Reset sound flag for new payment
+    hasPlayedSound.current = false;
     
     try {
       const response = await supabase.functions.invoke('create-pix-payment', {
         body: {
-          amount: total,
-          credits: quantity,
+          credits: selectedPackage.credits,
           adminId: admin.id,
           adminName: admin.nome,
+          sessionToken: admin.session_token, // Send session token for validation
         }
       });
 
@@ -217,11 +209,10 @@ export default function Recarregar() {
       setTimeRemaining(600);
       setCheckingPayment(true);
 
-      // Start payment verification
       startPaymentVerification(pixPayment.transactionId);
 
       toast.success('PIX Gerado!', {
-        description: `PIX de R$ ${total.toFixed(2)} criado com sucesso`
+        description: `PIX de R$ ${selectedPackage.total.toFixed(2)} criado com sucesso`
       });
     } catch (error: any) {
       toast.error('Erro ao gerar PIX', {
@@ -233,7 +224,6 @@ export default function Recarregar() {
   };
 
   const startPaymentVerification = (transactionId: string) => {
-    // Clear any existing interval
     if (checkIntervalRef.current) {
       clearInterval(checkIntervalRef.current);
     }
@@ -247,7 +237,6 @@ export default function Recarregar() {
           .single();
 
         if (payment?.status === 'PAID') {
-          // Stop checking
           if (checkIntervalRef.current) {
             clearInterval(checkIntervalRef.current);
             checkIntervalRef.current = null;
@@ -256,11 +245,9 @@ export default function Recarregar() {
           setPaymentConfirmed(true);
           setCheckingPayment(false);
           
-          // Play sound and fire confetti only once
           playNotificationSound();
           fire();
           
-          // Fetch updated credits from database
           const { data: updatedAdmin } = await supabase
             .from('admins')
             .select('creditos')
@@ -271,17 +258,16 @@ export default function Recarregar() {
             updateAdmin({ ...admin, creditos: updatedAdmin.creditos });
           }
           
-          // Refresh history
           fetchPaymentHistory();
           
           toast.success('Pagamento confirmado!', {
             description: `${payment.credits} créditos adicionados à sua conta`
           });
 
-          // Close modal after 3 seconds
           setTimeout(() => {
             setShowPixModal(false);
             setPixData(null);
+            setSelectedPackage(null);
           }, 3000);
           return;
         }
@@ -290,7 +276,6 @@ export default function Recarregar() {
       }
     };
 
-    // Check immediately then every 3 seconds
     checkPayment();
     checkIntervalRef.current = setInterval(checkPayment, 3000);
   };
@@ -328,7 +313,7 @@ export default function Recarregar() {
           <div>
             <h1 className="text-xl sm:text-2xl font-bold text-foreground">Recarregar Créditos</h1>
             <p className="text-sm sm:text-base text-muted-foreground">
-              Adicione créditos via PIX com desconto por volume
+              Escolha um pacote de créditos para recarregar via PIX
             </p>
           </div>
           <div className="text-left sm:text-right">
@@ -337,69 +322,69 @@ export default function Recarregar() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-          <Card>
-            <CardHeader className="p-4 sm:p-6">
-              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-                <Tag className="h-5 w-5 text-primary" />
-                Tabela de Preços
-              </CardTitle>
-              <CardDescription className="text-xs sm:text-sm">Quanto maior a quantidade, menor o preço</CardDescription>
-            </CardHeader>
-            <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
-              <div className="space-y-2">
-                {PRICE_TIERS.map((tier, i) => (
-                  <div key={i} className="flex justify-between items-center p-2 sm:p-3 rounded-lg bg-muted/50">
-                    <span className="text-xs sm:text-sm">
-                      {tier.maxQty === Infinity ? `${tier.minQty}+ créditos` : `${tier.minQty} - ${tier.maxQty} créditos`}
-                    </span>
-                    <Badge variant={tier.price <= 10 ? 'default' : 'secondary'} className="text-xs">
-                      R$ {tier.price.toFixed(2)}/un
+        {/* Credit Packages */}
+        <Card>
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+              <Tag className="h-5 w-5 text-primary" />
+              Pacotes de Créditos
+            </CardTitle>
+            <CardDescription className="text-xs sm:text-sm">
+              Selecione um pacote para recarregar
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+              {CREDIT_PACKAGES.map((pkg) => (
+                <button
+                  key={pkg.credits}
+                  onClick={() => handleSelectPackage(pkg)}
+                  className={`p-4 rounded-lg border-2 transition-all text-left ${
+                    selectedPackage?.credits === pkg.credits
+                      ? 'border-primary bg-primary/10'
+                      : 'border-muted hover:border-primary/50'
+                  }`}
+                >
+                  <div className="text-2xl font-bold text-foreground">{pkg.credits}</div>
+                  <div className="text-sm text-muted-foreground">créditos</div>
+                  <div className="mt-2 flex items-center justify-between">
+                    <Badge variant="secondary" className="text-xs">
+                      R$ {pkg.unitPrice.toFixed(2)}/un
                     </Badge>
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+                  <div className="mt-2 text-lg font-semibold text-primary">
+                    R$ {pkg.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </div>
+                </button>
+              ))}
+            </div>
 
-          <Card>
-            <CardHeader className="p-4 sm:p-6">
-              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-                <Calculator className="h-5 w-5 text-primary" />
-                Calculadora
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0 space-y-4 sm:space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="quantity" className="text-sm">Quantidade de Créditos</Label>
-                <Input
-                  id="quantity"
-                  type="number"
-                  min={1}
-                  value={quantity}
-                  onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 0))}
-                  className="text-base sm:text-lg"
-                />
-              </div>
-
-              <div className="p-3 sm:p-4 rounded-lg gradient-green text-success-foreground space-y-2 sm:space-y-3">
-                <div className="flex justify-between text-sm sm:text-base">
-                  <span>Preço unitário:</span>
-                  <span className="font-bold">R$ {unitPrice.toFixed(2)}</span>
+            {selectedPackage && (
+              <div className="mt-6 p-4 rounded-lg gradient-green text-success-foreground">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <p className="text-sm opacity-90">Pacote selecionado</p>
+                    <p className="text-2xl font-bold">{selectedPackage.credits} créditos</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm opacity-90">Total</p>
+                    <p className="text-2xl font-bold">
+                      R$ {selectedPackage.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </p>
+                  </div>
                 </div>
-                <div className="flex justify-between text-lg sm:text-xl">
-                  <span>Total:</span>
-                  <span className="font-bold">R$ {total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                </div>
+                <Button 
+                  className="w-full h-12 text-lg bg-white/20 hover:bg-white/30 text-white" 
+                  onClick={handleRecharge} 
+                  disabled={isProcessing}
+                >
+                  {isProcessing ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <QrCode className="mr-2 h-5 w-5" />}
+                  {isProcessing ? 'Gerando PIX...' : 'Gerar PIX'}
+                </Button>
               </div>
-
-              <Button className="w-full h-11 sm:h-12 text-base sm:text-lg" onClick={handleRecharge} disabled={isProcessing || quantity < 1}>
-                {isProcessing ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <QrCode className="mr-2 h-5 w-5" />}
-                {isProcessing ? 'Gerando PIX...' : 'Gerar PIX'}
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Payment History */}
         <Card>
@@ -483,71 +468,62 @@ export default function Recarregar() {
                     className="mx-auto max-w-[200px] border rounded-lg"
                   />
                   <p className="text-sm text-muted-foreground mt-2">
-                    Escaneie o QR Code com seu app de banco
+                    Escaneie o QR Code com o app do seu banco
                   </p>
                 </div>
               )}
 
               <div className="space-y-2">
-                <Label>Código PIX (Copia e Cola):</Label>
+                <p className="text-sm font-medium">Ou copie o código PIX:</p>
                 <div className="flex gap-2">
-                  <Input value={pixData?.qrCode || ""} readOnly className="text-xs" />
-                  <Button onClick={copyPixCode} size="sm">Copiar</Button>
+                  <code className="flex-1 p-2 text-xs bg-muted rounded break-all max-h-20 overflow-y-auto">
+                    {pixData?.qrCode}
+                  </code>
+                  <Button variant="outline" size="sm" onClick={copyPixCode}>
+                    Copiar
+                  </Button>
                 </div>
               </div>
 
-              <div className="bg-blue-50 dark:bg-blue-950/20 p-4 rounded-lg">
-                <h4 className="font-medium mb-2">Como pagar:</h4>
-                <ol className="text-sm space-y-1 list-decimal list-inside text-muted-foreground">
-                  <li>Abra o app do seu banco</li>
-                  <li>Escaneie o QR Code ou cole o código PIX</li>
-                  <li>Confirme o pagamento</li>
-                  <li>Aguarde a confirmação automática</li>
-                </ol>
-              </div>
-
               {checkingPayment && (
-                <div className="text-center py-2">
-                  <div className="flex items-center justify-center space-x-2 text-primary">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    <span className="text-sm">Verificando pagamento...</span>
-                  </div>
+                <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Aguardando confirmação do pagamento...
                 </div>
               )}
             </div>
           )}
 
           {paymentConfirmed && (
-            <div className="text-center py-6">
-              <div className="bg-green-50 dark:bg-green-950/20 p-6 rounded-lg border border-green-200 dark:border-green-800">
-                <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-green-700 dark:text-green-300">Pagamento Confirmado!</h3>
-                <p className="text-green-600 dark:text-green-400">{quantity} créditos adicionados à sua conta</p>
-              </div>
+            <div className="text-center py-8">
+              <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
+              <h3 className="text-xl font-bold text-green-600">Pagamento Confirmado!</h3>
+              <p className="text-muted-foreground mt-2">
+                Seus créditos foram adicionados à sua conta
+              </p>
             </div>
           )}
 
           {paymentExpired && (
-            <div className="text-center py-6">
-              <div className="bg-red-50 dark:bg-red-950/20 p-6 rounded-lg border border-red-200 dark:border-red-800">
-                <XCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-red-700 dark:text-red-300">Pagamento Expirado</h3>
-                <p className="text-red-600 dark:text-red-400 mb-4">O tempo para pagamento expirou</p>
-                <Button onClick={() => { 
-                  setShowPixModal(false); 
-                  setPaymentExpired(false);
-                  setPixData(null);
-                }}>
-                  Tentar Novamente
-                </Button>
-              </div>
+            <div className="text-center py-8">
+              <XCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
+              <h3 className="text-xl font-bold text-red-600">Pagamento Expirado</h3>
+              <p className="text-muted-foreground mt-2">
+                O tempo para pagamento expirou. Gere um novo PIX.
+              </p>
+              <Button className="mt-4" onClick={() => {
+                setShowPixModal(false);
+                setPixData(null);
+              }}>
+                Fechar
+              </Button>
             </div>
           )}
         </DialogContent>
       </Dialog>
 
       <ReactCanvasConfetti
-        onInit={getInstance}
+        onInit={handleInit}
         style={{
           position: 'fixed',
           pointerEvents: 'none',
@@ -555,7 +531,7 @@ export default function Recarregar() {
           height: '100%',
           top: 0,
           left: 0,
-          zIndex: 9999,
+          zIndex: 9999
         }}
       />
     </DashboardLayout>
