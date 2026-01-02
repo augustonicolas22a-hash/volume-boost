@@ -106,24 +106,24 @@ export default function Transferir() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-8 animate-fade-in max-w-xl">
+      <div className="space-y-6 sm:space-y-8 animate-fade-in max-w-xl mx-auto">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Transferir Créditos</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground">Transferir Créditos</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">
             Envie créditos para seus revendedores
           </p>
         </div>
 
         {/* Balance Card */}
         <Card className="gradient-green text-success-foreground">
-          <CardContent className="pt-6">
+          <CardContent className="p-4 sm:pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm opacity-90">Seu Saldo Atual</p>
-                <p className="text-3xl font-bold">{credits.toLocaleString('pt-BR')}</p>
-                <p className="text-sm opacity-80">créditos disponíveis</p>
+                <p className="text-xs sm:text-sm opacity-90">Seu Saldo Atual</p>
+                <p className="text-2xl sm:text-3xl font-bold">{credits.toLocaleString('pt-BR')}</p>
+                <p className="text-xs sm:text-sm opacity-80">créditos disponíveis</p>
               </div>
-              <CreditCard className="h-12 w-12 opacity-80" />
+              <CreditCard className="h-10 w-10 sm:h-12 sm:w-12 opacity-80" />
             </div>
           </CardContent>
         </Card>

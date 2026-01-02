@@ -1,15 +1,28 @@
 import { ReactNode } from 'react';
 import { Sidebar } from './Sidebar';
+import { MobileNav } from './MobileNav';
+import { useSessionSecurity } from '@/hooks/useSessionSecurity';
 
 interface DashboardLayoutProps {
   children: ReactNode;
 }
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
+  // Apply security hooks
+  useSessionSecurity();
+
   return (
     <div className="min-h-screen bg-background">
-      <Sidebar />
-      <main className="ml-64 p-8">
+      {/* Desktop Sidebar */}
+      <div className="hidden lg:block">
+        <Sidebar />
+      </div>
+      
+      {/* Mobile Navigation */}
+      <MobileNav />
+      
+      {/* Main Content */}
+      <main className="lg:ml-64 p-4 sm:p-6 lg:p-8 pt-20 lg:pt-8">
         {children}
       </main>
     </div>

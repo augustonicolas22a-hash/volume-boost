@@ -63,17 +63,17 @@ export default function Revendedores() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-8 animate-fade-in">
+      <div className="space-y-6 sm:space-y-8 animate-fade-in">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Meus Revendedores</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground">Meus Revendedores</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">
             Gerencie os revendedores vinculados à sua conta
           </p>
         </div>
 
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
               <Users className="h-5 w-5 text-primary" />
               Lista de Revendedores
             </CardTitle>
@@ -81,7 +81,7 @@ export default function Revendedores() {
               {resellers.length} revendedor(es) encontrado(s)
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
             {loadingData ? (
               <div className="flex justify-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
@@ -93,35 +93,39 @@ export default function Revendedores() {
                 <p className="text-sm">Crie um revendedor para começar</p>
               </div>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Saldo</TableHead>
-                    <TableHead>Data de Criação</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {resellers.map((reseller) => (
-                    <TableRow key={reseller.id}>
-                      <TableCell className="font-medium">
-                        {reseller.nome || '-'}
-                      </TableCell>
-                      <TableCell>{reseller.email}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="gap-1">
-                          <CreditCard className="h-3 w-3" />
-                          {reseller.creditos}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {new Date(reseller.created_at).toLocaleDateString('pt-BR')}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <div className="overflow-x-auto -mx-4 sm:mx-0">
+                <div className="min-w-[500px] sm:min-w-0 px-4 sm:px-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Nome</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Saldo</TableHead>
+                        <TableHead className="hidden sm:table-cell">Data de Criação</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {resellers.map((reseller) => (
+                        <TableRow key={reseller.id}>
+                          <TableCell className="font-medium">
+                            {reseller.nome || '-'}
+                          </TableCell>
+                          <TableCell className="text-xs sm:text-sm">{reseller.email}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="gap-1">
+                              <CreditCard className="h-3 w-3" />
+                              {reseller.creditos}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground hidden sm:table-cell">
+                            {new Date(reseller.created_at).toLocaleDateString('pt-BR')}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
             )}
           </CardContent>
         </Card>
