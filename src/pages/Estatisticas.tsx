@@ -1,0 +1,220 @@
+import { useEffect, useState } from 'react';
+import { useAuth } from '@/hooks/useAuth';
+import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { StatsCard } from '@/components/dashboard/StatsCard';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { Navigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { BarChart3, Users, CreditCard, TrendingUp, ArrowDownRight, ArrowUpRight } from 'lucide-react';
+
+interface Stats {
+  totalMasters: number;
+  totalResellers: number;
+  totalCredits: number;
+  totalTransactions: number;
+}
+
+interface Transaction {
+  id: string;
+  amount: number;
+  transaction_type: string;
+  total_price: number | null;
+  created_at: string;
+  from_email?: string;
+  to_email?: string;
+}
+
+export default function Estatisticas() {
+  const { user, role, loading } = useAuth();
+  const [stats, setStats] = useState<Stats>({
+    totalMasters: 0,
+    totalResellers: 0,
+    totalCredits: 0,
+    totalTransactions: 0
+  });
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loadingData, setLoadingData] = useState(true);
+
+  useEffect(() => {
+    if (user && role === 'dono') {
+      fetchStats();
+    }
+  }, [user, role]);
+
+  const fetchStats = async () => {
+    try {
+      // Count masters
+      const { count: mastersCount } = await supabase
+        .from('user_roles')
+        .select('*', { count: 'exact', head: true })
+        .eq('role', 'master');
+
+      // Count resellers
+      const { count: resellersCount } = await supabase
+        .from('user_roles')
+        .select('*', { count: 'exact', head: true })
+        .eq('role', 'revendedor');
+
+      // Total credits in system
+      const { data: creditsData } = await supabase
+        .from('credits')
+        .select('balance');
+      
+      const totalCredits = creditsData?.reduce((sum, c) => sum + c.balance, 0) || 0;
+
+      // Transactions
+      const { data: txData, count: txCount } = await supabase
+        .from('credit_transactions')
+        .select('*', { count: 'exact' })
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      setStats({
+        totalMasters: mastersCount || 0,
+        totalResellers: resellersCount || 0,
+        totalCredits,
+        totalTransactions: txCount || 0
+      });
+
+      setTransactions(txData || []);
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+    } finally {
+      setLoadingData(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (role !== 'dono') {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return (
+    <DashboardLayout>
+      <div className="space-y-8 animate-fade-in">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Estatísticas</h1>
+          <p className="text-muted-foreground">
+            Visão geral do sistema
+          </p>
+        </div>
+
+        {loadingData ? (
+          <div className="flex justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+          </div>
+        ) : (
+          <>
+            {/* Stats Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <StatsCard
+                title="Total Masters"
+                value={stats.totalMasters}
+                subtitle="Contas ativas"
+                variant="blue"
+                icon={<Users className="h-8 w-8" />}
+              />
+              <StatsCard
+                title="Total Revendedores"
+                value={stats.totalResellers}
+                subtitle="Contas ativas"
+                variant="pink"
+                icon={<Users className="h-8 w-8" />}
+              />
+              <StatsCard
+                title="Créditos no Sistema"
+                value={stats.totalCredits.toLocaleString('pt-BR')}
+                subtitle="Créditos circulando"
+                variant="green"
+                icon={<CreditCard className="h-8 w-8" />}
+              />
+              <StatsCard
+                title="Total Transações"
+                value={stats.totalTransactions}
+                subtitle="Operações realizadas"
+                icon={<TrendingUp className="h-8 w-8" />}
+              />
+            </div>
+
+            {/* Recent Transactions */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <BarChart3 className="h-5 w-5 text-primary" />
+                  Últimas Transações
+                </CardTitle>
+                <CardDescription>
+                  As 10 transações mais recentes do sistema
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {transactions.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    Nenhuma transação registrada
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Tipo</TableHead>
+                        <TableHead>Quantidade</TableHead>
+                        <TableHead>Valor</TableHead>
+                        <TableHead>Data</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {transactions.map((tx) => (
+                        <TableRow key={tx.id}>
+                          <TableCell>
+                            <Badge variant={tx.transaction_type === 'recharge' ? 'default' : 'secondary'}>
+                              {tx.transaction_type === 'recharge' ? (
+                                <>
+                                  <ArrowDownRight className="h-3 w-3 mr-1" />
+                                  Recarga
+                                </>
+                              ) : (
+                                <>
+                                  <ArrowUpRight className="h-3 w-3 mr-1" />
+                                  Transferência
+                                </>
+                              )}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            {tx.amount.toLocaleString('pt-BR')} créditos
+                          </TableCell>
+                          <TableCell>
+                            {tx.total_price 
+                              ? `R$ ${tx.total_price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+                              : '-'
+                            }
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {new Date(tx.created_at).toLocaleString('pt-BR')}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </>
+        )}
+      </div>
+    </DashboardLayout>
+  );
+}
