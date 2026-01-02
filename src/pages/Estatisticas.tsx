@@ -2,6 +2,11 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { StatsCard } from '@/components/dashboard/StatsCard';
+import { UserSearch } from '@/components/dashboard/UserSearch';
+import { RevenueChart } from '@/components/dashboard/RevenueChart';
+import { GoalProgress } from '@/components/dashboard/GoalProgress';
+import { TopMasters } from '@/components/dashboard/TopMasters';
+import { DepositTransferMetrics } from '@/components/dashboard/DepositTransferMetrics';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -22,6 +27,8 @@ interface Transaction {
   transaction_type: string;
   total_price: number | null;
   created_at: string;
+  from_admin?: { nome: string } | null;
+  to_admin?: { nome: string } | null;
 }
 
 export default function Estatisticas() {
@@ -43,26 +50,22 @@ export default function Estatisticas() {
 
   const fetchStats = async () => {
     try {
-      // Count masters
       const { count: mastersCount } = await supabase
         .from('admins')
         .select('*', { count: 'exact', head: true })
         .eq('rank', 'master');
 
-      // Count resellers
       const { count: resellersCount } = await supabase
         .from('admins')
         .select('*', { count: 'exact', head: true })
         .eq('rank', 'revendedor');
 
-      // Total credits in system
       const { data: adminsData } = await supabase
         .from('admins')
         .select('creditos');
       
       const totalCredits = adminsData?.reduce((sum, a) => sum + (a.creditos || 0), 0) || 0;
 
-      // Transactions
       const { data: txData, count: txCount } = await supabase
         .from('credit_transactions')
         .select('*', { count: 'exact' })
@@ -106,7 +109,7 @@ export default function Estatisticas() {
         <div>
           <h1 className="text-2xl font-bold text-foreground">Estatísticas</h1>
           <p className="text-muted-foreground">
-            Visão geral do sistema
+            Visão geral completa do sistema
           </p>
         </div>
 
@@ -116,7 +119,7 @@ export default function Estatisticas() {
           </div>
         ) : (
           <>
-            {/* Stats Grid */}
+            {/* Main Stats */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <StatsCard
                 title="Total Masters"
@@ -147,6 +150,21 @@ export default function Estatisticas() {
               />
             </div>
 
+            {/* Deposit/Transfer Metrics */}
+            <DepositTransferMetrics />
+
+            {/* User Search */}
+            <UserSearch />
+
+            {/* Charts and Goals Row */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <RevenueChart />
+              <div className="space-y-6">
+                <GoalProgress />
+                <TopMasters />
+              </div>
+            </div>
+
             {/* Recent Transactions */}
             <Card>
               <CardHeader>
@@ -164,49 +182,51 @@ export default function Estatisticas() {
                     Nenhuma transação registrada
                   </div>
                 ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Tipo</TableHead>
-                        <TableHead>Quantidade</TableHead>
-                        <TableHead>Valor</TableHead>
-                        <TableHead>Data</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {transactions.map((tx) => (
-                        <TableRow key={tx.id}>
-                          <TableCell>
-                            <Badge variant={tx.transaction_type === 'recharge' ? 'default' : 'secondary'}>
-                              {tx.transaction_type === 'recharge' ? (
-                                <>
-                                  <ArrowDownRight className="h-3 w-3 mr-1" />
-                                  Recarga
-                                </>
-                              ) : (
-                                <>
-                                  <ArrowUpRight className="h-3 w-3 mr-1" />
-                                  Transferência
-                                </>
-                              )}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="font-medium">
-                            {tx.amount.toLocaleString('pt-BR')} créditos
-                          </TableCell>
-                          <TableCell>
-                            {tx.total_price 
-                              ? `R$ ${tx.total_price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
-                              : '-'
-                            }
-                          </TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {new Date(tx.created_at).toLocaleString('pt-BR')}
-                          </TableCell>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Tipo</TableHead>
+                          <TableHead>Quantidade</TableHead>
+                          <TableHead>Valor</TableHead>
+                          <TableHead>Data</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {transactions.map((tx) => (
+                          <TableRow key={tx.id}>
+                            <TableCell>
+                              <Badge variant={tx.transaction_type === 'recharge' ? 'default' : 'secondary'}>
+                                {tx.transaction_type === 'recharge' ? (
+                                  <>
+                                    <ArrowDownRight className="h-3 w-3 mr-1" />
+                                    Recarga
+                                  </>
+                                ) : (
+                                  <>
+                                    <ArrowUpRight className="h-3 w-3 mr-1" />
+                                    Transferência
+                                  </>
+                                )}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="font-medium">
+                              {tx.amount.toLocaleString('pt-BR')} créditos
+                            </TableCell>
+                            <TableCell>
+                              {tx.total_price 
+                                ? `R$ ${tx.total_price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+                                : '-'
+                              }
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {new Date(tx.created_at).toLocaleString('pt-BR')}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
                 )}
               </CardContent>
             </Card>
