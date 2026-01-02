@@ -6,7 +6,7 @@ import { CreditCard, Crown, Sparkles } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
 
 export default function Dashboard() {
-  const { user, role, credits, loading } = useAuth();
+  const { admin, role, credits, loading } = useAuth();
 
   if (loading) {
     return (
@@ -16,7 +16,7 @@ export default function Dashboard() {
     );
   }
 
-  if (!user) {
+  if (!admin) {
     return <Navigate to="/login" replace />;
   }
 
@@ -42,7 +42,7 @@ export default function Dashboard() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-foreground">
-              Olá, {user.user_metadata?.name || user.email?.split('@')[0]}!
+              Olá, {admin.nome}!
             </h1>
             <p className="text-muted-foreground">
               Bem-vindo de volta ao seu painel de controle
