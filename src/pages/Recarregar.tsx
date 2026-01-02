@@ -13,15 +13,26 @@ import { CreditCard, Tag, QrCode, Loader2, Clock, CheckCircle, XCircle, History,
 import ReactCanvasConfetti from 'react-canvas-confetti';
 
 // Fixed credit packages - NO custom input allowed
+// Base price is R$14, discounts increase with quantity
 const CREDIT_PACKAGES = [
   { credits: 10, unitPrice: 14, total: 140 },
-  { credits: 25, unitPrice: 13.5, total: 337.5 },
+  { credits: 25, unitPrice: 13.50, total: 337.50 },
   { credits: 50, unitPrice: 13, total: 650 },
-  { credits: 100, unitPrice: 12.5, total: 1250 },
-  { credits: 150, unitPrice: 12, total: 1800 },
-  { credits: 200, unitPrice: 11.5, total: 2300 },
-  { credits: 250, unitPrice: 11, total: 2750 },
+  { credits: 100, unitPrice: 12, total: 1200 },
+  { credits: 150, unitPrice: 11, total: 1650 },
+  { credits: 200, unitPrice: 10.50, total: 2100 },
+  { credits: 250, unitPrice: 10, total: 2500 },
+  { credits: 400, unitPrice: 9.50, total: 3800 },
 ];
+
+const BASE_PRICE = 14; // Price without discount
+
+function calculateSavings(pkg: typeof CREDIT_PACKAGES[0]) {
+  const fullPrice = pkg.credits * BASE_PRICE;
+  const savings = fullPrice - pkg.total;
+  const percentOff = ((savings / fullPrice) * 100).toFixed(0);
+  return { savings, percentOff };
+}
 
 interface PixPayment {
   transactionId: string;
@@ -335,28 +346,46 @@ export default function Recarregar() {
           </CardHeader>
           <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-              {CREDIT_PACKAGES.map((pkg) => (
-                <button
-                  key={pkg.credits}
-                  onClick={() => handleSelectPackage(pkg)}
-                  className={`p-4 rounded-lg border-2 transition-all text-left ${
-                    selectedPackage?.credits === pkg.credits
-                      ? 'border-primary bg-primary/10'
-                      : 'border-muted hover:border-primary/50'
-                  }`}
-                >
-                  <div className="text-2xl font-bold text-foreground">{pkg.credits}</div>
-                  <div className="text-sm text-muted-foreground">créditos</div>
-                  <div className="mt-2 flex items-center justify-between">
-                    <Badge variant="secondary" className="text-xs">
-                      R$ {pkg.unitPrice.toFixed(2)}/un
-                    </Badge>
-                  </div>
-                  <div className="mt-2 text-lg font-semibold text-primary">
-                    R$ {pkg.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </div>
-                </button>
-              ))}
+              {CREDIT_PACKAGES.map((pkg) => {
+                const { savings, percentOff } = calculateSavings(pkg);
+                return (
+                  <button
+                    key={pkg.credits}
+                    onClick={() => handleSelectPackage(pkg)}
+                    className={`p-4 rounded-lg border-2 transition-all text-left relative ${
+                      selectedPackage?.credits === pkg.credits
+                        ? 'border-primary bg-primary/10'
+                        : 'border-muted hover:border-primary/50'
+                    }`}
+                  >
+                    {savings > 0 && (
+                      <div className="absolute -top-2 -right-2 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                        -{percentOff}%
+                      </div>
+                    )}
+                    <div className="text-2xl font-bold text-foreground">{pkg.credits}</div>
+                    <div className="text-sm text-muted-foreground">créditos</div>
+                    <div className="mt-2 flex items-center gap-2">
+                      <Badge variant="secondary" className="text-xs">
+                        R$ {pkg.unitPrice.toFixed(2)}/un
+                      </Badge>
+                      {pkg.unitPrice < BASE_PRICE && (
+                        <span className="text-xs text-muted-foreground line-through">
+                          R$ {BASE_PRICE.toFixed(2)}
+                        </span>
+                      )}
+                    </div>
+                    <div className="mt-2 text-lg font-semibold text-primary">
+                      R$ {pkg.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </div>
+                    {savings > 0 && (
+                      <div className="mt-1 text-xs text-green-600 font-medium">
+                        Economia: R$ {savings.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
             </div>
 
             {selectedPackage && (
@@ -365,12 +394,18 @@ export default function Recarregar() {
                   <div>
                     <p className="text-sm opacity-90">Pacote selecionado</p>
                     <p className="text-2xl font-bold">{selectedPackage.credits} créditos</p>
+                    <p className="text-sm opacity-80">R$ {selectedPackage.unitPrice.toFixed(2)} por unidade</p>
                   </div>
                   <div className="text-right">
                     <p className="text-sm opacity-90">Total</p>
                     <p className="text-2xl font-bold">
                       R$ {selectedPackage.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </p>
+                    {calculateSavings(selectedPackage).savings > 0 && (
+                      <p className="text-sm font-medium">
+                        Você economiza R$ {calculateSavings(selectedPackage).savings.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </p>
+                    )}
                   </div>
                 </div>
                 <Button 

@@ -8,26 +8,27 @@ const corsHeaders = {
 
 // Server-side price tiers - MUST match frontend exactly
 const PRICE_TIERS = [
-  { minQty: 10, maxQty: 10, price: 14 },
-  { minQty: 25, maxQty: 25, price: 13.5 },
-  { minQty: 50, maxQty: 50, price: 13 },
-  { minQty: 100, maxQty: 100, price: 12.5 },
-  { minQty: 150, maxQty: 150, price: 12 },
-  { minQty: 200, maxQty: 200, price: 11.5 },
-  { minQty: 250, maxQty: 250, price: 11 },
+  { credits: 10, unitPrice: 14, total: 140 },
+  { credits: 25, unitPrice: 13.50, total: 337.50 },
+  { credits: 50, unitPrice: 13, total: 650 },
+  { credits: 100, unitPrice: 12, total: 1200 },
+  { credits: 150, unitPrice: 11, total: 1650 },
+  { credits: 200, unitPrice: 10.50, total: 2100 },
+  { credits: 250, unitPrice: 10, total: 2500 },
+  { credits: 400, unitPrice: 9.50, total: 3800 },
 ];
 
 // Allowed credit packages - ONLY these are valid
-const ALLOWED_PACKAGES = [10, 25, 50, 100, 150, 200, 250];
+const ALLOWED_PACKAGES = [10, 25, 50, 100, 150, 200, 250, 400];
 
 function calculatePrice(quantity: number): { unitPrice: number; total: number } | null {
   // Only allow exact package amounts
   if (!ALLOWED_PACKAGES.includes(quantity)) {
     return null;
   }
-  const tier = PRICE_TIERS.find(t => quantity >= t.minQty && quantity <= t.maxQty);
+  const tier = PRICE_TIERS.find(t => t.credits === quantity);
   if (!tier) return null;
-  return { unitPrice: tier.price, total: quantity * tier.price };
+  return { unitPrice: tier.unitPrice, total: tier.total };
 }
 
 serve(async (req) => {
