@@ -25,6 +25,7 @@ export type Database = {
           key: string
           last_active: string | null
           nome: string
+          pin: string | null
           profile_photo: string | null
           rank: string | null
           session_token: string | null
@@ -39,6 +40,7 @@ export type Database = {
           key: string
           last_active?: string | null
           nome: string
+          pin?: string | null
           profile_photo?: string | null
           rank?: string | null
           session_token?: string | null
@@ -53,6 +55,7 @@ export type Database = {
           key?: string
           last_active?: string | null
           nome?: string
+          pin?: string | null
           profile_photo?: string | null
           rank?: string | null
           session_token?: string | null
@@ -230,6 +233,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      set_admin_pin: {
+        Args: { p_admin_id: number; p_pin: string }
+        Returns: boolean
+      }
       transfer_credits: {
         Args: {
           p_amount: number
@@ -248,6 +255,10 @@ export type Database = {
           profile_photo: string
           rank: string
         }[]
+      }
+      validate_pin: {
+        Args: { p_admin_id: number; p_pin: string }
+        Returns: boolean
       }
     }
     Enums: {
