@@ -28,6 +28,7 @@ export default function Transferir() {
   useEffect(() => {
     if (admin && role === 'master') {
       fetchResellers();
+      refreshCredits(); // Atualiza saldo ao carregar a página
     }
   }, [admin, role]);
 
