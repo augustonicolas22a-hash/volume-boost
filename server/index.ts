@@ -86,10 +86,34 @@ async function testDatabaseConnection() {
   }
 }
 
-app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:5173',
-  credentials: true
-}));
+// CORS (dev-friendly): aceita múltiplas origens locais (5173/8080/127.0.0.1)
+const allowedOrigins = new Set(
+  [
+    process.env.CLIENT_URL,
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+    'http://localhost:8080',
+    'http://127.0.0.1:8080',
+  ].filter(Boolean) as string[]
+);
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Requests sem Origin (ex: curl/postman) devem ser permitidos
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.has(origin)) return callback(null, true);
+
+      return callback(
+        new Error(
+          `CORS bloqueado: origem ${origin} não permitida. Configure CLIENT_URL ou use localhost:5173/8080.`
+        )
+      );
+    },
+    credentials: true,
+  })
+);
 
 app.use(express.json());
 
@@ -131,7 +155,7 @@ async function startServer() {
     console.log(`   URL: http://localhost:${PORT}`);
     console.log(`   API: http://localhost:${PORT}/api`);
     console.log(`   Health: http://localhost:${PORT}/api/health`);
-    console.log(`   Cliente: ${process.env.CLIENT_URL || 'http://localhost:5173'}`);
+    console.log(`   CORS (origens permitidas): ${Array.from(allowedOrigins).join(', ') || 'nenhuma'}`);
     console.log('─────────────────────────────────────────────────────────────────');
     
     if (dbConnected) {
