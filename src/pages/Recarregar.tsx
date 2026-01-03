@@ -10,26 +10,26 @@ import { Slider } from '@/components/ui/slider';
 import { Navigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { CreditCard, Tag, QrCode, Loader2, Clock, CheckCircle, XCircle, History, RefreshCw, TrendingDown, Bitcoin } from 'lucide-react';
+import { CreditCard, Tag, QrCode, Loader2, Clock, CheckCircle, XCircle, History, RefreshCw, TrendingDown, Bitcoin, Star } from 'lucide-react';
 import ReactCanvasConfetti from 'react-canvas-confetti';
 
 // Fixed credit packages - NO custom input allowed
 // Base price is R$14, discounts increase with quantity
 const CREDIT_PACKAGES = [
-  { credits: 10, unitPrice: 14.00, total: 140 },
-  { credits: 15, unitPrice: 13.80, total: 207 },
-  { credits: 25, unitPrice: 13.50, total: 337.50 },
-  { credits: 30, unitPrice: 13.30, total: 399 },
-  { credits: 50, unitPrice: 13.00, total: 650 },
-  { credits: 75, unitPrice: 12.50, total: 937.50 },
-  { credits: 100, unitPrice: 12.00, total: 1200 },
-  { credits: 150, unitPrice: 11.50, total: 1725 },
-  { credits: 200, unitPrice: 11.00, total: 2200 },
-  { credits: 250, unitPrice: 10.50, total: 2625 },
-  { credits: 300, unitPrice: 10.20, total: 3060 },
-  { credits: 350, unitPrice: 10.00, total: 3500 },
-  { credits: 400, unitPrice: 9.80, total: 3920 },
-  { credits: 500, unitPrice: 9.65, total: 4825 },
+  { credits: 10, unitPrice: 14.00, total: 140, popular: false },
+  { credits: 15, unitPrice: 13.80, total: 207, popular: false },
+  { credits: 25, unitPrice: 13.50, total: 337.50, popular: false },
+  { credits: 30, unitPrice: 13.30, total: 399, popular: false },
+  { credits: 50, unitPrice: 13.00, total: 650, popular: true },
+  { credits: 75, unitPrice: 12.50, total: 937.50, popular: false },
+  { credits: 100, unitPrice: 12.00, total: 1200, popular: true },
+  { credits: 150, unitPrice: 11.50, total: 1725, popular: false },
+  { credits: 200, unitPrice: 11.00, total: 2200, popular: true },
+  { credits: 250, unitPrice: 10.50, total: 2625, popular: false },
+  { credits: 300, unitPrice: 10.20, total: 3060, popular: false },
+  { credits: 350, unitPrice: 10.00, total: 3500, popular: false },
+  { credits: 400, unitPrice: 9.80, total: 3920, popular: false },
+  { credits: 500, unitPrice: 9.65, total: 4825, popular: false },
 ];
 
 const BASE_PRICE = 14; // Price without discount
@@ -376,9 +376,17 @@ export default function Recarregar() {
                     className={`p-3 rounded-lg border-2 transition-all text-left relative ${
                       selectedPackage.credits === pkg.credits
                         ? 'border-primary bg-primary/10'
-                        : 'border-muted hover:border-primary/50'
+                        : pkg.popular 
+                          ? 'border-primary/50 bg-primary/5 hover:border-primary'
+                          : 'border-muted hover:border-primary/50'
                     }`}
                   >
+                    {pkg.popular && (
+                      <div className="absolute -top-2 -left-2 bg-primary text-primary-foreground text-[10px] font-bold px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
+                        <Star className="h-2.5 w-2.5 fill-current" />
+                        Popular
+                      </div>
+                    )}
                     {savings > 0 && (
                       <div className="absolute -top-2 -right-2 bg-green-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
                         -{percentOff}%
