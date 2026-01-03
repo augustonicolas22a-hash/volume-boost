@@ -13,9 +13,10 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ error: 'Email e chave são obrigatórios' });
     }
 
+    // Buscar por email e comparar a chave em código (suporta valores com espaços / tipos diferentes)
     const admins = await query<any[]>(
-      'SELECT id, nome, email, creditos, `rank`, profile_photo, pin, criado_por FROM admins WHERE email = ? AND `key` = ?',
-      [email, key]
+      'SELECT id, nome, email, creditos, `rank`, profile_photo, pin, criado_por, `key` as stored_key FROM admins WHERE email = ? LIMIT 1',
+      [email]
     );
 
     if (admins.length === 0) {
@@ -23,6 +24,22 @@ router.post('/login', async (req, res) => {
     }
 
     const admin = admins[0];
+
+    const providedKey = String(key).trim();
+    const storedKey = String(admin.stored_key ?? '').trim();
+
+    // Debug (não loga a chave em si, apenas tamanhos)
+    console.log('[AUTH] login tentativa', {
+      email,
+      providedLen: providedKey.length,
+      storedLen: storedKey.length,
+      match: providedKey === storedKey,
+    });
+
+    if (providedKey !== storedKey) {
+      return res.status(401).json({ error: 'Credenciais inválidas' });
+    }
+
     const sessionToken = uuidv4();
 
     await query(
@@ -30,12 +47,15 @@ router.post('/login', async (req, res) => {
       [sessionToken, req.ip, admin.id]
     );
 
+    // Não retornar stored_key
+    delete (admin as any).stored_key;
+
     res.json({
-      admin: { 
-        ...admin, 
+      admin: {
+        ...admin,
         session_token: sessionToken,
-        has_pin: admin.pin ? true : false
-      }
+        has_pin: admin.pin ? true : false,
+      },
     });
   } catch (error) {
     console.error('Erro no login:', error);
@@ -49,7 +69,7 @@ router.post('/validate-pin', async (req, res) => {
     const { adminId, pin } = req.body;
 
     const result = await query<any[]>(
-      'SELECT pin FROM admins WHERE id = ?',
+      'SELECT pin FROM admins WHERE id = ? LIMIT 1',
       [adminId]
     );
 
@@ -58,9 +78,16 @@ router.post('/validate-pin', async (req, res) => {
     }
 
     const storedPin = result[0].pin;
-    
-    // Comparar PIN (suporta texto plano por enquanto)
-    const valid = storedPin === pin;
+
+    // Comparar PIN (texto plano), tolerando espaços
+    const valid = String(storedPin ?? '').trim() === String(pin ?? '').trim();
+
+    console.log('[AUTH] validate-pin', {
+      adminId,
+      providedLen: String(pin ?? '').trim().length,
+      storedLen: String(storedPin ?? '').trim().length,
+      valid,
+    });
 
     res.json({ valid });
   } catch (error) {
