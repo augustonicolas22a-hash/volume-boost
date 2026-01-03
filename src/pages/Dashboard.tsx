@@ -124,19 +124,13 @@ export default function Dashboard() {
     <DashboardLayout>
       <div className="space-y-6 sm:space-y-8 animate-fade-in">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-foreground">
-              Olá, {admin.nome}!
-            </h1>
-            <p className="text-sm sm:text-base text-muted-foreground">
-              Bem-vindo de volta ao seu painel de controle
-            </p>
-          </div>
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <Sparkles className="h-5 w-5" />
-            <span className="text-sm">Pronto para criar</span>
-          </div>
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground">
+            Olá, {admin.nome}!
+          </h1>
+          <p className="text-sm sm:text-base text-muted-foreground">
+            Bem-vindo de volta ao seu painel de controle
+          </p>
         </div>
 
         {/* Stats Cards */}
