@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Navigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
+import api from '@/lib/api';
 import { toast } from 'sonner';
 import { Send, Loader2, CreditCard } from 'lucide-react';
 
@@ -34,13 +34,8 @@ export default function Transferir() {
 
   const fetchResellers = async () => {
     try {
-      // Get resellers created by this master
-      const { data } = await supabase
-        .from('admins')
-        .select('id, email, nome')
-        .eq('criado_por', admin!.id)
-        .eq('rank', 'revendedor');
-
+      // Get resellers created by this master using Node.js API
+      const data = await api.admins.getResellers(admin!.id);
       setResellers(data || []);
     } catch (error) {
       console.error('Error fetching resellers:', error);
@@ -79,14 +74,9 @@ export default function Transferir() {
     setIsTransferring(true);
 
     try {
-      const { data, error } = await supabase.rpc('transfer_credits', {
-        p_from_admin_id: admin.id,
-        p_to_admin_id: parseInt(selectedReseller),
-        p_amount: amount
-      });
+      const result = await api.credits.transfer(admin.id, parseInt(selectedReseller), amount);
 
-      if (error) throw error;
-      if (!data) throw new Error('Saldo insuficiente');
+      if (!result.success) throw new Error('Saldo insuficiente');
 
       await refreshCredits();
       toast.success('Transferência realizada com sucesso!', {

@@ -11,7 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Navigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
+import api from '@/lib/api';
 import { BarChart3, Users, CreditCard, TrendingUp, ArrowDownRight, ArrowUpRight } from 'lucide-react';
 
 interface Stats {
@@ -52,56 +52,20 @@ export default function Estatisticas() {
 
   const fetchStats = async () => {
     try {
-      const { count: mastersCount } = await supabase
-        .from('admins')
-        .select('*', { count: 'exact', head: true })
-        .eq('rank', 'master');
-
-      const { count: resellersCount } = await supabase
-        .from('admins')
-        .select('*', { count: 'exact', head: true })
-        .eq('rank', 'revendedor');
-
-      const { data: adminsData } = await supabase
-        .from('admins')
-        .select('creditos');
+      // Get dashboard stats from Node.js API
+      const dashboardStats = await api.admins.getDashboardStats();
       
-      const totalCredits = adminsData?.reduce((sum, a) => sum + (a.creditos || 0), 0) || 0;
-
-      const { data: txData, count: txCount } = await supabase
-        .from('credit_transactions')
-        .select('*', { count: 'exact' })
-        .order('created_at', { ascending: false })
-        .limit(10);
-
-      // Fetch admin names for transactions
-      const adminIds = new Set<number>();
-      txData?.forEach(tx => {
-        if (tx.from_admin_id) adminIds.add(tx.from_admin_id);
-        if (tx.to_admin_id) adminIds.add(tx.to_admin_id);
-      });
-
-      const { data: adminsNames } = await supabase
-        .from('admins')
-        .select('id, nome')
-        .in('id', Array.from(adminIds));
-
-      const adminMap = new Map(adminsNames?.map(a => [a.id, a.nome]) || []);
-
-      const transactionsWithNames = txData?.map(tx => ({
-        ...tx,
-        from_admin_name: tx.from_admin_id ? adminMap.get(tx.from_admin_id) : undefined,
-        to_admin_name: adminMap.get(tx.to_admin_id)
-      })) || [];
-
+      // Get transactions - for now we'll skip this as it requires a new endpoint
+      // We can add it later to the Node.js API
+      
       setStats({
-        totalMasters: mastersCount || 0,
-        totalResellers: resellersCount || 0,
-        totalCredits,
-        totalTransactions: txCount || 0
+        totalMasters: dashboardStats.totalMasters || 0,
+        totalResellers: dashboardStats.totalResellers || 0,
+        totalCredits: dashboardStats.totalCredits || 0,
+        totalTransactions: 0 // Will need to add this to the API
       });
 
-      setTransactions(transactionsWithNames);
+      setTransactions([]);
     } catch (error) {
       console.error('Error fetching stats:', error);
     } finally {

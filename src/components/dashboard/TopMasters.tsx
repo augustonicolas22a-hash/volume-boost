@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Trophy, Medal, Award, CreditCard } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import api from '@/lib/api';
 
 interface TopMaster {
   id: number;
@@ -22,24 +22,23 @@ export function TopMasters() {
 
   const fetchTopMasters = async () => {
     try {
-      // Get all masters
-      const { data: mastersData } = await supabase
-        .from('admins')
-        .select('id, nome, email')
-        .eq('rank', 'master');
+      // Get all masters from Node.js API
+      const mastersData = await api.admins.getAllMasters();
 
-      if (!mastersData) return;
+      if (!mastersData) {
+        setMasters([]);
+        return;
+      }
 
-      // Get recharge transactions for each master
-      const { data: transactions } = await supabase
-        .from('credit_transactions')
-        .select('to_admin_id, amount, total_price')
-        .eq('transaction_type', 'recharge');
+      // Get all transactions
+      const transactions = await api.credits.getAllTransactions();
 
-      const masterStats = mastersData.map((master) => {
-        const masterTx = transactions?.filter((tx) => tx.to_admin_id === master.id) || [];
-        const totalPurchased = masterTx.reduce((sum, tx) => sum + (tx.amount || 0), 0);
-        const totalSpent = masterTx.reduce((sum, tx) => sum + (tx.total_price || 0), 0);
+      const masterStats = mastersData.map((master: any) => {
+        const masterTx = transactions?.filter(
+          (tx: any) => tx.to_admin_id === master.id && tx.transaction_type === 'recharge'
+        ) || [];
+        const totalPurchased = masterTx.reduce((sum: number, tx: any) => sum + (tx.amount || 0), 0);
+        const totalSpent = masterTx.reduce((sum: number, tx: any) => sum + (Number(tx.total_price) || 0), 0);
 
         return {
           ...master,
@@ -49,11 +48,12 @@ export function TopMasters() {
       });
 
       // Sort by total spent
-      masterStats.sort((a, b) => b.totalSpent - a.totalSpent);
+      masterStats.sort((a: TopMaster, b: TopMaster) => b.totalSpent - a.totalSpent);
 
       setMasters(masterStats.slice(0, 5));
     } catch (error) {
       console.error('Error fetching top masters:', error);
+      setMasters([]);
     } finally {
       setLoading(false);
     }

@@ -144,4 +144,59 @@ router.get('/revenue/:year/:month', async (req, res) => {
   }
 });
 
+// Get all transactions
+router.get('/transactions/all', async (_req, res) => {
+  try {
+    const transactions = await query<any[]>(
+      `SELECT ct.*, fa.nome as from_admin_name, ta.nome as to_admin_name
+      FROM credit_transactions ct
+      LEFT JOIN admins fa ON ct.from_admin_id = fa.id
+      LEFT JOIN admins ta ON ct.to_admin_id = ta.id
+      ORDER BY ct.created_at DESC LIMIT 100`
+    );
+    res.json(transactions);
+  } catch (error) {
+    console.error('Erro ao buscar transações:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// Get metrics
+router.get('/metrics', async (_req, res) => {
+  try {
+    const transactions = await query<any[]>('SELECT amount, total_price, transaction_type FROM credit_transactions');
+    const deposits = transactions.filter(tx => tx.transaction_type === 'recharge');
+    const transfers = transactions.filter(tx => tx.transaction_type === 'transfer');
+    const totalDepositValue = deposits.reduce((sum, tx) => sum + (Number(tx.total_price) || 0), 0);
+    const avgTicket = deposits.length > 0 ? totalDepositValue / deposits.length : 0;
+    res.json({
+      totalDeposits: deposits.length,
+      totalDepositValue,
+      totalTransfers: transfers.length,
+      totalTransferCredits: transfers.reduce((sum, tx) => sum + (tx.amount || 0), 0),
+      avgTicket,
+    });
+  } catch (error) {
+    console.error('Erro ao buscar métricas:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// Get monthly data
+router.get('/monthly-data', async (_req, res) => {
+  try {
+    const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+    const chartData = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date();
+      d.setMonth(d.getMonth() - i);
+      chartData.push({ month: months[d.getMonth()], deposits: 0, transfers: 0 });
+    }
+    res.json(chartData);
+  } catch (error) {
+    console.error('Erro:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
 export default router;

@@ -58,6 +58,10 @@ export const api = {
 
     getResellers: (masterId: number) => request<any[]>(`/admins/resellers/${masterId}`),
 
+    getAllMasters: () => request<any[]>('/admins/masters'),
+
+    getAllResellers: () => request<any[]>('/admins/all-resellers'),
+
     search: (query: string) => request<any[]>(`/admins/search/${encodeURIComponent(query)}`),
 
     createMaster: (data: { nome: string; email: string; key: string; criadoPor: number }) =>
@@ -102,16 +106,33 @@ export const api = {
         body: JSON.stringify({ adminId, amount, unitPrice, totalPrice }),
       }),
 
-    getTransactions: (adminId: number) => request<any[]>(`/credits/transactions/${adminId}`),
+    getTransactions: (adminId?: number) => 
+      request<any[]>(adminId ? `/credits/transactions/${adminId}` : '/credits/transactions'),
+
+    getAllTransactions: () => request<any[]>('/credits/transactions/all'),
 
     getBalance: (adminId: number) => request<{ credits: number }>(`/credits/balance/${adminId}`),
 
     getRevenue: (year: number, month: number) =>
       request<{ revenue: number }>(`/credits/revenue/${year}/${month}`),
+
+    getMetrics: () => request<{
+      totalDeposits: number;
+      totalDepositValue: number;
+      totalTransfers: number;
+      totalTransferCredits: number;
+      avgTicket: number;
+    }>('/credits/metrics'),
+
+    getMonthlyData: () => request<Array<{
+      month: string;
+      deposits: number;
+      transfers: number;
+    }>>('/credits/monthly-data'),
   },
 
   payments: {
-    createPix: (credits: number, adminId: number, adminName: string) =>
+    createPix: (credits: number, adminId: number, adminName: string, sessionToken: string) =>
       request<{
         transactionId: string;
         amount: number;
@@ -120,16 +141,19 @@ export const api = {
         qrCodeBase64: string;
       }>('/payments/pix/create', {
         method: 'POST',
-        body: JSON.stringify({ credits, adminId, adminName }),
+        body: JSON.stringify({ credits, adminId, adminName, sessionToken }),
       }),
 
     checkStatus: (transactionId: string) =>
       request<any>(`/payments/pix/status/${transactionId}`),
 
+    getHistory: (adminId: number) =>
+      request<any[]>(`/payments/history/${adminId}`),
+
     getPriceTiers: () => request<any[]>('/payments/price-tiers'),
 
     getGoal: (year: number, month: number) =>
-      request<{ target_revenue: number }>(`/payments/goals/${year}/${month}`),
+      request<{ target_revenue: number; current_revenue: number }>(`/payments/goals/${year}/${month}`),
 
     setGoal: (year: number, month: number, targetRevenue: number) =>
       request<{ success: boolean }>('/payments/goals', {

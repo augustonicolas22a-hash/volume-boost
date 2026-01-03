@@ -38,12 +38,26 @@ router.get('/resellers/:masterId', async (req, res) => {
   }
 });
 
+// Get all masters
+router.get('/masters', async (_req, res) => {
+  try {
+    const masters = await query<any[]>(
+      'SELECT id, nome, email, creditos, created_at FROM admins WHERE `rank` = ?',
+      ['master']
+    );
+    res.json(masters);
+  } catch (error) {
+    console.error('Erro ao buscar masters:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
 // Pesquisar admins
 router.get('/search/:query', async (req, res) => {
   try {
     const searchQuery = `%${req.params.query}%`;
     const admins = await query<any[]>(
-      'SELECT id, nome, email, creditos, `rank` FROM admins WHERE nome LIKE ? OR email LIKE ? LIMIT 20',
+      'SELECT id, nome, email, creditos, `rank`, created_at FROM admins WHERE nome LIKE ? OR email LIKE ? LIMIT 20',
       [searchQuery, searchQuery]
     );
 

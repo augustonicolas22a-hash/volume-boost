@@ -4,7 +4,7 @@ import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Target, Edit2, Check, X } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import api from '@/lib/api';
 import { toast } from 'sonner';
 
 export function GoalProgress() {
@@ -24,32 +24,14 @@ export function GoalProgress() {
       const month = now.getMonth() + 1;
       const year = now.getFullYear();
 
-      // Fetch current goal
-      const { data: goalData } = await supabase
-        .from('monthly_goals')
-        .select('target_revenue')
-        .eq('month', month)
-        .eq('year', year)
-        .single();
+      // Fetch current goal from Node.js API
+      const goalData = await api.payments.getGoal(year, month);
 
       if (goalData) {
-        setTargetRevenue(Number(goalData.target_revenue));
-        setNewTarget(goalData.target_revenue.toString());
+        setTargetRevenue(Number(goalData.target_revenue) || 0);
+        setNewTarget((goalData.target_revenue || 0).toString());
+        setCurrentRevenue(Number(goalData.current_revenue) || 0);
       }
-
-      // Calculate current revenue for this month
-      const startOfMonth = new Date(year, month - 1, 1);
-      const endOfMonth = new Date(year, month, 0, 23, 59, 59);
-
-      const { data: transactions } = await supabase
-        .from('credit_transactions')
-        .select('total_price')
-        .eq('transaction_type', 'recharge')
-        .gte('created_at', startOfMonth.toISOString())
-        .lte('created_at', endOfMonth.toISOString());
-
-      const total = transactions?.reduce((sum, tx) => sum + (tx.total_price || 0), 0) || 0;
-      setCurrentRevenue(total);
     } catch (error) {
       console.error('Error fetching goal:', error);
     } finally {
@@ -69,14 +51,7 @@ export function GoalProgress() {
       const month = now.getMonth() + 1;
       const year = now.getFullYear();
 
-      const { error } = await supabase
-        .from('monthly_goals')
-        .upsert(
-          { month, year, target_revenue: value, updated_at: new Date().toISOString() },
-          { onConflict: 'month,year' }
-        );
-
-      if (error) throw error;
+      await api.payments.setGoal(year, month, value);
 
       setTargetRevenue(value);
       setEditing(false);
