@@ -1,73 +1,118 @@
-# Welcome to your Lovable project
+# Data Sistemas
 
-## Project info
+Sistema de gerenciamento de créditos com frontend React e backend Node.js + MySQL.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## 📁 Estrutura do Projeto
 
-## How can I edit this code?
-
-There are several ways of editing your application.
-
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+```
+├── server/              # Backend Node.js + Express + MySQL
+│   ├── db/              # Conexão com banco de dados
+│   ├── routes/          # Rotas da API
+│   ├── index.ts         # Entrada do servidor
+│   └── package.json     # Dependências do backend
+├── src/                 # Frontend React + Vite + TypeScript
+│   ├── components/      # Componentes React
+│   ├── hooks/           # Custom hooks
+│   ├── pages/           # Páginas da aplicação
+│   └── lib/             # Utilitários e cliente API
+├── shared/              # Tipos compartilhados
+├── docs/                # Documentação e migrations
+└── *.bat                # Scripts de automação Windows
 ```
 
-**Edit a file directly in GitHub**
+## 🚀 Instalação
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### Requisitos
+- Node.js 18+
+- MySQL 8+
+- npm ou yarn
 
-**Use GitHub Codespaces**
+### Passos
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+1. **Execute o instalador:**
+   ```batch
+   install.bat
+   ```
 
-## What technologies are used for this project?
+2. **Configure o banco de dados:**
+   - Edite o arquivo `.env.local` com suas credenciais MySQL
+   - Execute `db-push.bat` para criar as tabelas
 
-This project is built with:
+3. **Inicie o sistema:**
+   ```batch
+   dev.bat
+   ```
+   ou
+   ```batch
+   start.bat
+   ```
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+4. **Acesse:**
+   - Frontend: http://localhost:5173
+   - Backend API: http://localhost:3001
 
-## How can I deploy this project?
+## 📦 Scripts Disponíveis
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+| Script | Descrição |
+|--------|-----------|
+| `install.bat` | Instala todas as dependências |
+| `db-push.bat` | Cria as tabelas no MySQL |
+| `dev.bat` | Inicia frontend e backend em modo desenvolvimento |
+| `start.bat` | Alias para dev.bat |
 
-## Can I connect a custom domain to my Lovable project?
+## 🔧 Configuração
 
-Yes, you can!
+### Variáveis de Ambiente
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+Crie um arquivo `.env.local` na raiz com:
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+```env
+# Banco de Dados
+DB_HOST=localhost
+DB_USER=root
+DB_PASSWORD=sua_senha
+DB_NAME=data_sistemas
+
+# Servidor
+PORT=3001
+CLIENT_URL=http://localhost:5173
+```
+
+### Banco de Dados
+
+O schema completo está em `docs/mysql-migration.sql`. Inclui:
+- Tabela `admins` - Usuários do sistema
+- Tabela `credit_transactions` - Histórico de transações
+- Tabela `pix_payments` - Pagamentos PIX
+- Tabela `monthly_goals` - Metas mensais
+- Tabela `price_tiers` - Tabela de preços
+
+## 🔒 Segurança
+
+- Senhas armazenadas com hash
+- Tokens de sessão únicos
+- Validação de PIN
+- CORS configurado
+
+## 📡 API Endpoints
+
+### Auth
+- `POST /api/auth/login` - Login
+- `POST /api/auth/validate-pin` - Validar PIN
+- `POST /api/auth/set-pin` - Definir PIN
+- `POST /api/auth/logout` - Logout
+
+### Admins
+- `GET /api/admins/:id` - Buscar admin
+- `GET /api/admins/resellers/:masterId` - Listar revendedores
+- `POST /api/admins/master` - Criar master
+- `POST /api/admins/reseller` - Criar revendedor
+
+### Credits
+- `POST /api/credits/transfer` - Transferir créditos
+- `POST /api/credits/recharge` - Recarregar créditos
+- `GET /api/credits/balance/:adminId` - Consultar saldo
+
+### Payments
+- `POST /api/payments/pix/create` - Criar pagamento PIX
+- `GET /api/payments/pix/status/:id` - Status do pagamento
