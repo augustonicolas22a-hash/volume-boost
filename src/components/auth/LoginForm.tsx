@@ -99,17 +99,7 @@ export function LoginForm() {
 
     const hasPin = !!adminWithPin?.pin;
 
-    // If it's the owner (dono), skip PIN and login directly
-    if (adminData.rank === 'dono') {
-      const { error: signInError } = await signIn(email, password);
-      if (signInError) {
-        toast.error('Erro ao fazer login');
-      } else {
-        toast.success('Login realizado com sucesso!');
-      }
-      setLoading(false);
-      return;
-    }
+    // All ranks now require PIN verification
 
     // For master and revendedor, show PIN pad
     setPendingAdmin({
