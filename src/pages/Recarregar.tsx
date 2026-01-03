@@ -6,10 +6,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Slider } from '@/components/ui/slider';
 import { Navigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { CreditCard, Tag, QrCode, Loader2, Clock, CheckCircle, XCircle, History, RefreshCw } from 'lucide-react';
+import { CreditCard, Tag, QrCode, Loader2, Clock, CheckCircle, XCircle, History, RefreshCw, TrendingDown } from 'lucide-react';
 import ReactCanvasConfetti from 'react-canvas-confetti';
 
 // Fixed credit packages - NO custom input allowed
@@ -34,6 +35,11 @@ function calculateSavings(pkg: typeof CREDIT_PACKAGES[0]) {
   return { savings, percentOff };
 }
 
+// Get package index from slider value (0-7)
+function getPackageFromSlider(value: number): typeof CREDIT_PACKAGES[0] {
+  return CREDIT_PACKAGES[Math.min(value, CREDIT_PACKAGES.length - 1)];
+}
+
 interface PixPayment {
   transactionId: string;
   qrCode: string;
@@ -51,7 +57,8 @@ interface PaymentHistory {
 
 export default function Recarregar() {
   const { admin, role, credits, loading, updateAdmin } = useAuth();
-  const [selectedPackage, setSelectedPackage] = useState<typeof CREDIT_PACKAGES[0] | null>(null);
+  const [sliderValue, setSliderValue] = useState(0);
+  const [selectedPackage, setSelectedPackage] = useState<typeof CREDIT_PACKAGES[0]>(CREDIT_PACKAGES[0]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showPixModal, setShowPixModal] = useState(false);
   const [pixData, setPixData] = useState<PixPayment | null>(null);
@@ -186,7 +193,14 @@ export default function Recarregar() {
     return <Navigate to="/dashboard" replace />;
   }
 
-  const handleSelectPackage = (pkg: typeof CREDIT_PACKAGES[0]) => {
+  const handleSliderChange = (value: number[]) => {
+    const newValue = value[0];
+    setSliderValue(newValue);
+    setSelectedPackage(getPackageFromSlider(newValue));
+  };
+
+  const handleSelectPackage = (pkg: typeof CREDIT_PACKAGES[0], index: number) => {
+    setSliderValue(index);
     setSelectedPackage(pkg);
   };
 
@@ -344,80 +358,114 @@ export default function Recarregar() {
               Selecione um pacote para recarregar
             </CardDescription>
           </CardHeader>
-          <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-              {CREDIT_PACKAGES.map((pkg) => {
-                const { savings, percentOff } = calculateSavings(pkg);
-                return (
-                  <button
-                    key={pkg.credits}
-                    onClick={() => handleSelectPackage(pkg)}
-                    className={`p-4 rounded-lg border-2 transition-all text-left relative ${
-                      selectedPackage?.credits === pkg.credits
-                        ? 'border-primary bg-primary/10'
-                        : 'border-muted hover:border-primary/50'
-                    }`}
-                  >
-                    {savings > 0 && (
-                      <div className="absolute -top-2 -right-2 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded-full">
-                        -{percentOff}%
-                      </div>
-                    )}
-                    <div className="text-2xl font-bold text-foreground">{pkg.credits}</div>
-                    <div className="text-sm text-muted-foreground">créditos</div>
-                    <div className="mt-2 flex items-center gap-2">
-                      <Badge variant="secondary" className="text-xs">
-                        R$ {pkg.unitPrice.toFixed(2)}/un
-                      </Badge>
-                      {pkg.unitPrice < BASE_PRICE && (
-                        <span className="text-xs text-muted-foreground line-through">
-                          R$ {BASE_PRICE.toFixed(2)}
-                        </span>
-                      )}
-                    </div>
-                    <div className="mt-2 text-lg font-semibold text-primary">
-                      R$ {pkg.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </div>
-                    {savings > 0 && (
-                      <div className="mt-1 text-xs text-green-600 font-medium">
-                        Economia: R$ {savings.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      </div>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
+          <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0 space-y-6">
+            {/* Slider Section */}
+            <div className="bg-muted/30 rounded-xl p-6">
+              <div className="text-center mb-6">
+                <div className="text-4xl sm:text-5xl font-bold text-primary mb-2">
+                  {selectedPackage.credits}
+                </div>
+                <div className="text-lg text-muted-foreground">créditos</div>
+              </div>
 
-            {selectedPackage && (
-              <div className="mt-6 p-4 rounded-lg gradient-green text-success-foreground">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <p className="text-sm opacity-90">Pacote selecionado</p>
-                    <p className="text-2xl font-bold">{selectedPackage.credits} créditos</p>
-                    <p className="text-sm opacity-80">R$ {selectedPackage.unitPrice.toFixed(2)} por unidade</p>
+              <div className="px-2 mb-6">
+                <Slider
+                  value={[sliderValue]}
+                  onValueChange={handleSliderChange}
+                  max={CREDIT_PACKAGES.length - 1}
+                  step={1}
+                  className="w-full"
+                />
+                <div className="flex justify-between mt-2 text-xs text-muted-foreground">
+                  <span>10</span>
+                  <span>50</span>
+                  <span>100</span>
+                  <span>200</span>
+                  <span>400</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 text-center">
+                <div className="bg-background rounded-lg p-3">
+                  <div className="text-sm text-muted-foreground">Preço por unidade</div>
+                  <div className="text-xl font-bold text-foreground">
+                    R$ {selectedPackage.unitPrice.toFixed(2)}
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm opacity-90">Total</p>
-                    <p className="text-2xl font-bold">
-                      R$ {selectedPackage.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </p>
-                    {calculateSavings(selectedPackage).savings > 0 && (
-                      <p className="text-sm font-medium">
-                        Você economiza R$ {calculateSavings(selectedPackage).savings.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      </p>
-                    )}
+                  {selectedPackage.unitPrice < BASE_PRICE && (
+                    <div className="text-xs text-muted-foreground line-through">
+                      R$ {BASE_PRICE.toFixed(2)}
+                    </div>
+                  )}
+                </div>
+                <div className="bg-background rounded-lg p-3">
+                  <div className="text-sm text-muted-foreground">Total</div>
+                  <div className="text-xl font-bold text-primary">
+                    R$ {selectedPackage.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </div>
                 </div>
-                <Button 
-                  className="w-full h-12 text-lg bg-white/20 hover:bg-white/30 text-white" 
-                  onClick={handleRecharge} 
-                  disabled={isProcessing}
-                >
-                  {isProcessing ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <QrCode className="mr-2 h-5 w-5" />}
-                  {isProcessing ? 'Gerando PIX...' : 'Gerar PIX'}
-                </Button>
               </div>
-            )}
+
+              {calculateSavings(selectedPackage).savings > 0 && (
+                <div className="mt-4 flex items-center justify-center gap-2 text-green-600">
+                  <TrendingDown className="h-4 w-4" />
+                  <span className="font-medium">
+                    Você economiza R$ {calculateSavings(selectedPackage).savings.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} ({calculateSavings(selectedPackage).percentOff}% off)
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Quick Select Buttons */}
+            <div>
+              <p className="text-sm text-muted-foreground mb-3">Ou selecione rapidamente:</p>
+              <div className="flex flex-wrap gap-2">
+                {CREDIT_PACKAGES.map((pkg, index) => {
+                  const { percentOff } = calculateSavings(pkg);
+                  return (
+                    <button
+                      key={pkg.credits}
+                      onClick={() => handleSelectPackage(pkg, index)}
+                      className={`px-3 py-2 rounded-lg border transition-all text-sm relative ${
+                        selectedPackage.credits === pkg.credits
+                          ? 'border-primary bg-primary text-primary-foreground'
+                          : 'border-muted bg-muted/50 hover:border-primary/50'
+                      }`}
+                    >
+                      {pkg.credits}
+                      {Number(percentOff) > 0 && (
+                        <span className={`ml-1 text-xs ${selectedPackage.credits === pkg.credits ? 'text-primary-foreground/80' : 'text-green-600'}`}>
+                          -{percentOff}%
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Payment Button */}
+            <div className="p-4 rounded-lg gradient-green text-success-foreground">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <p className="text-sm opacity-90">Pacote selecionado</p>
+                  <p className="text-2xl font-bold">{selectedPackage.credits} créditos</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm opacity-90">Total a pagar</p>
+                  <p className="text-2xl font-bold">
+                    R$ {selectedPackage.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </p>
+                </div>
+              </div>
+              <Button 
+                className="w-full h-12 text-lg bg-white/20 hover:bg-white/30 text-white" 
+                onClick={handleRecharge} 
+                disabled={isProcessing}
+              >
+                {isProcessing ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <QrCode className="mr-2 h-5 w-5" />}
+                {isProcessing ? 'Gerando PIX...' : 'Gerar PIX'}
+              </Button>
+            </div>
           </CardContent>
         </Card>
 
