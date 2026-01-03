@@ -33,23 +33,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check for stored admin on mount
-    const storedAdmin = localStorage.getItem('admin');
-    if (storedAdmin) {
-      try {
-        const parsedAdmin = JSON.parse(storedAdmin) as Admin;
-        setAdmin(parsedAdmin);
-        setRole(parsedAdmin.rank as AppRole);
-        setCredits(parsedAdmin.creditos);
-      } catch (e) {
-        localStorage.removeItem('admin');
+    // Check for stored admin on mount and validate session
+    const validateStoredSession = async () => {
+      const storedAdmin = localStorage.getItem('admin');
+      if (storedAdmin) {
+        try {
+          const parsedAdmin = JSON.parse(storedAdmin) as Admin;
+          
+          // Validar sessão com o backend
+          if (parsedAdmin.session_token) {
+            const { valid } = await api.auth.validateSession(
+              parsedAdmin.id, 
+              parsedAdmin.session_token
+            );
+            
+            if (valid) {
+              setAdmin(parsedAdmin);
+              setRole(parsedAdmin.rank as AppRole);
+              setCredits(parsedAdmin.creditos);
+            } else {
+              // Sessão inválida - limpar
+              localStorage.removeItem('admin');
+            }
+          } else {
+            localStorage.removeItem('admin');
+          }
+        } catch (e) {
+          localStorage.removeItem('admin');
+        }
       }
-    }
-    setLoading(false);
+      setLoading(false);
+    };
+
+    validateStoredSession();
   }, []);
 
   const refreshCredits = async () => {
-    if (admin) {
+    if (admin && admin.session_token) {
       try {
         const data = await api.credits.getBalance(admin.id);
         if (data) {
@@ -98,7 +118,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         await api.auth.logout(admin.id);
       } catch (error) {
-        console.error('Error during logout:', error);
+        // Silently fail - still clear local state
       }
     }
     

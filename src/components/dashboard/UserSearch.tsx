@@ -11,7 +11,7 @@ interface Admin {
   email: string;
   rank: string;
   creditos: number;
-  created_at: string;
+  created_at?: string;
 }
 
 export function UserSearch() {
@@ -118,10 +118,12 @@ export function UserSearch() {
                       <Mail className="h-3 w-3" />
                       {user.email}
                     </span>
-                    <span className="flex items-center gap-1">
-                      <Calendar className="h-3 w-3" />
-                      {new Date(user.created_at).toLocaleDateString('pt-BR')}
-                    </span>
+                    {user.created_at && (
+                      <span className="flex items-center gap-1">
+                        <Calendar className="h-3 w-3" />
+                        {new Date(user.created_at).toLocaleDateString('pt-BR')}
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div className="text-right">
