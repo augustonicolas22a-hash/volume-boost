@@ -16,23 +16,20 @@ import ReactCanvasConfetti from 'react-canvas-confetti';
 // Fixed credit packages - NO custom input allowed
 // Base price is R$14, discounts increase with quantity
 const CREDIT_PACKAGES = [
-  { credits: 10, unitPrice: 14, total: 140 },
+  { credits: 10, unitPrice: 14.00, total: 140 },
   { credits: 15, unitPrice: 13.80, total: 207 },
   { credits: 25, unitPrice: 13.50, total: 337.50 },
   { credits: 30, unitPrice: 13.30, total: 399 },
-  { credits: 50, unitPrice: 13, total: 650 },
+  { credits: 50, unitPrice: 13.00, total: 650 },
   { credits: 75, unitPrice: 12.50, total: 937.50 },
-  { credits: 100, unitPrice: 12, total: 1200 },
+  { credits: 100, unitPrice: 12.00, total: 1200 },
   { credits: 150, unitPrice: 11.50, total: 1725 },
-  { credits: 200, unitPrice: 11, total: 2200 },
+  { credits: 200, unitPrice: 11.00, total: 2200 },
   { credits: 250, unitPrice: 10.50, total: 2625 },
   { credits: 300, unitPrice: 10.20, total: 3060 },
-  { credits: 350, unitPrice: 10, total: 3500 },
+  { credits: 350, unitPrice: 10.00, total: 3500 },
   { credits: 400, unitPrice: 9.80, total: 3920 },
-  { credits: 500, unitPrice: 9.60, total: 4800 },
-  { credits: 550, unitPrice: 9.50, total: 5225 },
-  { credits: 600, unitPrice: 9.40, total: 5640 },
-  { credits: 650, unitPrice: 9.30, total: 6045 },
+  { credits: 500, unitPrice: 9.65, total: 4825 },
 ];
 
 const BASE_PRICE = 14; // Price without discount
