@@ -224,6 +224,90 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_view_admin: {
+        Args: { target_id: number; viewer_id: number }
+        Returns: boolean
+      }
+      create_master: {
+        Args: {
+          p_creator_id: number
+          p_email: string
+          p_key: string
+          p_nome: string
+          p_session_token: string
+        }
+        Returns: number
+      }
+      create_reseller: {
+        Args: {
+          p_creator_id: number
+          p_email: string
+          p_key: string
+          p_nome: string
+          p_session_token: string
+        }
+        Returns: number
+      }
+      get_admin_balance: {
+        Args: { p_admin_id: number; p_session_token: string }
+        Returns: number
+      }
+      get_admin_by_id: {
+        Args: { p_admin_id: number; p_session_token: string }
+        Returns: {
+          created_at: string
+          creditos: number
+          email: string
+          id: number
+          nome: string
+          profile_photo: string
+          rank: string
+        }[]
+      }
+      get_admin_rank: { Args: { p_admin_id: number }; Returns: string }
+      get_all_masters: {
+        Args: { p_admin_id: number; p_session_token: string }
+        Returns: {
+          created_at: string
+          creditos: number
+          email: string
+          id: number
+          nome: string
+        }[]
+      }
+      get_dashboard_stats: {
+        Args: { p_admin_id: number; p_session_token: string }
+        Returns: {
+          total_credits: number
+          total_masters: number
+          total_resellers: number
+        }[]
+      }
+      get_price_tiers: {
+        Args: { p_admin_id: number; p_session_token: string }
+        Returns: {
+          id: number
+          is_active: boolean
+          max_qty: number
+          min_qty: number
+          price: number
+        }[]
+      }
+      get_resellers_by_master: {
+        Args: { p_master_id: number; p_session_token: string }
+        Returns: {
+          created_at: string
+          creditos: number
+          email: string
+          id: number
+          nome: string
+        }[]
+      }
+      is_valid_admin: {
+        Args: { p_admin_id: number; p_session_token: string }
+        Returns: boolean
+      }
+      logout_admin: { Args: { p_admin_id: number }; Returns: boolean }
       recharge_credits: {
         Args: {
           p_admin_id: number
@@ -232,6 +316,16 @@ export type Database = {
           p_unit_price: number
         }
         Returns: boolean
+      }
+      search_admins: {
+        Args: { p_admin_id: number; p_query: string; p_session_token: string }
+        Returns: {
+          creditos: number
+          email: string
+          id: number
+          nome: string
+          rank: string
+        }[]
       }
       set_admin_pin: {
         Args: { p_admin_id: number; p_pin: string }
@@ -250,10 +344,12 @@ export type Database = {
         Returns: {
           creditos: number
           email: string
+          has_pin: boolean
           id: number
           nome: string
           profile_photo: string
           rank: string
+          session_token: string
         }[]
       }
       validate_pin: {
