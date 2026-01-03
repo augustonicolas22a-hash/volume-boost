@@ -303,6 +303,7 @@ export type Database = {
           nome: string
         }[]
       }
+      hash_password: { Args: { p_password: string }; Returns: string }
       is_valid_admin: {
         Args: { p_admin_id: number; p_session_token: string }
         Returns: boolean
@@ -354,6 +355,10 @@ export type Database = {
       }
       validate_pin: {
         Args: { p_admin_id: number; p_pin: string }
+        Returns: boolean
+      }
+      verify_password: {
+        Args: { p_hash: string; p_password: string }
         Returns: boolean
       }
     }

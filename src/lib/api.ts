@@ -20,22 +20,28 @@ export const api = {
       const { data, error } = await supabase.rpc('validate_login', {
         p_email: email,
         p_key: key
-      });
+      } as any);
 
-      if (error) throw new Error(error.message);
-      if (!data || data.length === 0) throw new Error('Email ou senha incorretos');
+      if (error) {
+        console.error('Login error:', error);
+        throw new Error(error.message);
+      }
+      
+      // Handle both array and single object responses
+      const adminData = Array.isArray(data) ? data[0] : data;
+      
+      if (!adminData) throw new Error('Email ou senha incorretos');
 
-      const admin = data[0];
       return {
         admin: {
-          id: admin.id,
-          nome: admin.nome,
-          email: admin.email,
-          creditos: admin.creditos,
-          rank: admin.rank,
-          profile_photo: admin.profile_photo,
-          pin: admin.has_pin,
-          session_token: admin.session_token
+          id: adminData.id,
+          nome: adminData.nome,
+          email: adminData.email,
+          creditos: adminData.creditos,
+          rank: adminData.rank,
+          profile_photo: adminData.profile_photo,
+          pin: adminData.has_pin,
+          session_token: adminData.session_token
         }
       };
     },
