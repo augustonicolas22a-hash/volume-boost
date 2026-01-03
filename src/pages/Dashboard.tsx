@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CreditCard, Crown, Sparkles, TrendingUp, Users, Clock } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import api from '@/lib/api';
 
 interface TopReseller {
   id: number;
@@ -31,53 +31,42 @@ export default function Dashboard() {
       if (!admin) return;
       
       try {
-        // Fetch resellers created by this admin (for master) or all (for dono)
-        const resellersQuery = supabase
-          .from('admins')
-          .select('id, nome, created_at')
-          .eq('rank', 'revendedor');
-        
-        if (role === 'master') {
-          resellersQuery.eq('criado_por', admin.id);
-        }
-        
-        const { data: resellers } = await resellersQuery.order('created_at', { ascending: false });
+        // Fetch resellers using Node.js API
+        const resellers = await api.admins.getResellers(admin.id);
         
         if (resellers) {
           setTotalResellers(resellers.length);
-          setRecentResellers(resellers.slice(0, 3).map(r => ({
+          setRecentResellers(resellers.slice(0, 3).map((r: any) => ({
             id: r.id,
             nome: r.nome,
             created_at: r.created_at || ''
           })));
-        }
 
-        // Fetch top resellers by credits received
-        const { data: transactions } = await supabase
-          .from('credit_transactions')
-          .select('to_admin_id, amount')
-          .eq('transaction_type', 'transfer');
+          // Calculate top resellers from transactions
+          try {
+            const transactions = await api.credits.getTransactions(admin.id);
+            const resellerIds = resellers.map((r: any) => r.id);
+            const totals: Record<number, number> = {};
+            
+            transactions?.forEach((t: any) => {
+              if (t.transaction_type === 'transfer' && resellerIds.includes(t.to_admin_id)) {
+                totals[t.to_admin_id] = (totals[t.to_admin_id] || 0) + t.amount;
+              }
+            });
 
-        if (transactions && resellers) {
-          const resellerIds = resellers.map(r => r.id);
-          const totals: Record<number, number> = {};
-          
-          transactions.forEach(t => {
-            if (resellerIds.includes(t.to_admin_id)) {
-              totals[t.to_admin_id] = (totals[t.to_admin_id] || 0) + t.amount;
-            }
-          });
+            const topList = Object.entries(totals)
+              .map(([id, total]) => ({
+                id: parseInt(id),
+                nome: resellers.find((r: any) => r.id === parseInt(id))?.nome || 'Desconhecido',
+                total_received: total
+              }))
+              .sort((a, b) => b.total_received - a.total_received)
+              .slice(0, 5);
 
-          const topList = Object.entries(totals)
-            .map(([id, total]) => ({
-              id: parseInt(id),
-              nome: resellers.find(r => r.id === parseInt(id))?.nome || 'Desconhecido',
-              total_received: total
-            }))
-            .sort((a, b) => b.total_received - a.total_received)
-            .slice(0, 5);
-
-          setTopResellers(topList);
+            setTopResellers(topList);
+          } catch (error) {
+            console.error('Error fetching transactions:', error);
+          }
         }
       } catch (error) {
         console.error('Error fetching stats:', error);

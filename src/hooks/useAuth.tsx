@@ -1,5 +1,5 @@
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import api from '@/lib/api';
 
 type AppRole = 'dono' | 'master' | 'revendedor' | null;
 
@@ -50,57 +50,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshCredits = async () => {
     if (admin) {
-      const { data, error } = await supabase
-        .from('admins')
-        .select('creditos')
-        .eq('id', admin.id)
-        .single();
-      
-      if (data && !error) {
-        setCredits(data.creditos);
-        const updatedAdmin = { ...admin, creditos: data.creditos };
-        setAdmin(updatedAdmin);
-        localStorage.setItem('admin', JSON.stringify(updatedAdmin));
+      try {
+        const data = await api.credits.getBalance(admin.id);
+        if (data) {
+          setCredits(data.credits);
+          const updatedAdmin = { ...admin, creditos: data.credits };
+          setAdmin(updatedAdmin);
+          localStorage.setItem('admin', JSON.stringify(updatedAdmin));
+        }
+      } catch (error) {
+        console.error('Error refreshing credits:', error);
       }
     }
   };
 
   const signIn = async (email: string, key: string): Promise<{ error: Error | null; admin?: Admin }> => {
     try {
-      const { data, error } = await supabase
-        .from('admins')
-        .select('id, nome, email, creditos, rank, profile_photo, session_token')
-        .eq('email', email.toLowerCase().trim())
-        .eq('key', key)
-        .single();
+      const data = await api.auth.login(email, key);
 
-      if (error || !data) {
+      if (!data?.admin) {
         return { error: new Error('Email ou senha inválidos') };
       }
 
       const adminData: Admin = {
-        id: data.id,
-        nome: data.nome,
-        email: data.email,
-        creditos: data.creditos || 0,
-        rank: data.rank || 'revendedor',
-        profile_photo: data.profile_photo,
-        session_token: data.session_token,
+        id: data.admin.id,
+        nome: data.admin.nome,
+        email: data.admin.email,
+        creditos: data.admin.creditos || 0,
+        rank: data.admin.rank || 'revendedor',
+        profile_photo: data.admin.profile_photo,
+        session_token: data.admin.session_token,
       };
-
-      // Generate session token
-      const sessionToken = crypto.randomUUID();
-      
-      // Update session in database
-      await supabase
-        .from('admins')
-        .update({ 
-          session_token: sessionToken,
-          last_active: new Date().toISOString()
-        })
-        .eq('id', adminData.id);
-
-      adminData.session_token = sessionToken;
       
       setAdmin(adminData);
       setRole(adminData.rank as AppRole);
@@ -108,18 +88,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.setItem('admin', JSON.stringify(adminData));
 
       return { error: null, admin: adminData };
-    } catch (e) {
-      return { error: e as Error };
+    } catch (e: any) {
+      return { error: new Error(e.message || 'Erro ao fazer login') };
     }
   };
 
-  const signOut = () => {
+  const signOut = async () => {
     if (admin) {
-      // Clear session in database
-      supabase
-        .from('admins')
-        .update({ session_token: null })
-        .eq('id', admin.id);
+      try {
+        await api.auth.logout(admin.id);
+      } catch (error) {
+        console.error('Error during logout:', error);
+      }
     }
     
     setAdmin(null);

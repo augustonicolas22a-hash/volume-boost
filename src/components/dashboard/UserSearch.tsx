@@ -3,7 +3,7 @@ import { Search, User, Crown, Users, Mail, Calendar, CreditCard } from 'lucide-r
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { supabase } from '@/integrations/supabase/client';
+import api from '@/lib/api';
 
 interface Admin {
   id: number;
@@ -33,13 +33,7 @@ export function UserSearch() {
     setSearched(true);
 
     try {
-      const { data, error } = await supabase
-        .from('admins')
-        .select('id, nome, email, rank, creditos, created_at')
-        .or(`nome.ilike.%${searchQuery}%,email.ilike.%${searchQuery}%`)
-        .limit(10);
-
-      if (error) throw error;
+      const data = await api.admins.search(searchQuery);
       setResults(data || []);
     } catch (error) {
       console.error('Search error:', error);

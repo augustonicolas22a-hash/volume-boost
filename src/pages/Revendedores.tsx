@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Navigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
+import api from '@/lib/api';
 import { Users, CreditCard } from 'lucide-react';
 
 interface Reseller {
@@ -29,14 +29,8 @@ export default function Revendedores() {
 
   const fetchResellers = async () => {
     try {
-      // Get resellers created by this master
-      const { data } = await supabase
-        .from('admins')
-        .select('id, email, nome, creditos, created_at')
-        .eq('criado_por', admin!.id)
-        .eq('rank', 'revendedor')
-        .order('created_at', { ascending: false });
-
+      // Get resellers created by this master using Node.js API
+      const data = await api.admins.getResellers(admin!.id);
       setResellers(data || []);
     } catch (error) {
       console.error('Error fetching resellers:', error);

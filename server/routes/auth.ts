@@ -14,7 +14,7 @@ router.post('/login', async (req, res) => {
     }
 
     const admins = await query<any[]>(
-      'SELECT id, nome, email, creditos, `rank`, profile_photo FROM admins WHERE email = ? AND `key` = ?',
+      'SELECT id, nome, email, creditos, `rank`, profile_photo, pin FROM admins WHERE email = ? AND `key` = ?',
       [email, key]
     );
 

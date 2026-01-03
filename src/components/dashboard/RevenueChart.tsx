@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { TrendingUp } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import api from '@/lib/api';
 
 interface MonthlyData {
   month: string;
@@ -32,53 +32,12 @@ export function RevenueChart() {
 
   const fetchMonthlyData = async () => {
     try {
-      const sixMonthsAgo = new Date();
-      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
-      sixMonthsAgo.setDate(1);
-
-      const { data: transactions } = await supabase
-        .from('credit_transactions')
-        .select('amount, total_price, transaction_type, created_at')
-        .gte('created_at', sixMonthsAgo.toISOString());
-
-      const monthlyMap = new Map<string, { deposits: number; transfers: number }>();
-
-      // Initialize last 6 months
-      for (let i = 5; i >= 0; i--) {
-        const d = new Date();
-        d.setMonth(d.getMonth() - i);
-        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-        monthlyMap.set(key, { deposits: 0, transfers: 0 });
-      }
-
-      transactions?.forEach((tx) => {
-        const date = new Date(tx.created_at);
-        const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-        
-        if (monthlyMap.has(key)) {
-          const current = monthlyMap.get(key)!;
-          if (tx.transaction_type === 'recharge') {
-            current.deposits += tx.total_price || 0;
-          } else {
-            current.transfers += tx.amount || 0;
-          }
-        }
-      });
-
-      const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-      
-      const chartData = Array.from(monthlyMap.entries()).map(([key, values]) => {
-        const [, month] = key.split('-');
-        return {
-          month: months[parseInt(month) - 1],
-          deposits: Number(values.deposits.toFixed(2)),
-          transfers: values.transfers,
-        };
-      });
-
-      setData(chartData);
+      const monthlyData = await api.credits.getMonthlyData();
+      setData(monthlyData || []);
     } catch (error) {
       console.error('Error fetching monthly data:', error);
+      // Fallback to empty data
+      setData([]);
     } finally {
       setLoading(false);
     }

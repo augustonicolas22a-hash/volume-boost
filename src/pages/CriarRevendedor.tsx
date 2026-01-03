@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Navigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
+import api from '@/lib/api';
 import { toast } from 'sonner';
 import { UserPlus, Loader2 } from 'lucide-react';
 
@@ -40,19 +40,13 @@ export default function CriarRevendedor() {
     setIsCreating(true);
 
     try {
-      // Create admin with revendedor role
-      const { error } = await supabase
-        .from('admins')
-        .insert({
-          nome: formData.name,
-          email: formData.email.toLowerCase().trim(),
-          key: formData.password,
-          rank: 'revendedor',
-          criado_por: admin.id,
-          creditos: 0
-        });
-
-      if (error) throw error;
+      // Create reseller using Node.js API
+      await api.admins.createReseller({
+        nome: formData.name,
+        email: formData.email.toLowerCase().trim(),
+        key: formData.password,
+        criadoPor: admin.id
+      });
 
       toast.success('Revendedor criado com sucesso!', {
         description: `Email: ${formData.email}`

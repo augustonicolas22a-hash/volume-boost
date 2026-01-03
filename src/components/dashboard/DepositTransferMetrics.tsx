@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowDownCircle, ArrowUpCircle, Wallet, DollarSign } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import api from '@/lib/api';
 
 interface MetricsData {
   totalDeposits: number;
@@ -27,26 +27,8 @@ export function DepositTransferMetrics() {
 
   const fetchMetrics = async () => {
     try {
-      const { data: transactions } = await supabase
-        .from('credit_transactions')
-        .select('amount, total_price, transaction_type');
-
-      if (!transactions) return;
-
-      const deposits = transactions.filter((tx) => tx.transaction_type === 'recharge');
-      const transfers = transactions.filter((tx) => tx.transaction_type === 'transfer');
-
-      const totalDepositValue = deposits.reduce((sum, tx) => sum + (tx.total_price || 0), 0);
-      const totalTransferCredits = transfers.reduce((sum, tx) => sum + (tx.amount || 0), 0);
-      const avgTicket = deposits.length > 0 ? totalDepositValue / deposits.length : 0;
-
-      setMetrics({
-        totalDeposits: deposits.length,
-        totalDepositValue,
-        totalTransfers: transfers.length,
-        totalTransferCredits,
-        avgTicket,
-      });
+      const data = await api.credits.getMetrics();
+      setMetrics(data);
     } catch (error) {
       console.error('Error fetching metrics:', error);
     } finally {

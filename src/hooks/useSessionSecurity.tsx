@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useAuth } from './useAuth';
-import { supabase } from '@/integrations/supabase/client';
+import api from '@/lib/api';
 
 export function useSessionSecurity() {
   const { admin, signOut } = useAuth();
@@ -43,14 +43,10 @@ export function useSessionSecurity() {
       if (!admin?.session_token) return;
 
       try {
-        const { data } = await supabase
-          .from('admins')
-          .select('session_token')
-          .eq('id', admin.id)
-          .single();
+        const data = await api.auth.validateSession(admin.id, admin.session_token);
 
         // If session token doesn't match, someone else logged in
-        if (data && data.session_token !== admin.session_token) {
+        if (!data.valid) {
           signOut();
           window.location.href = '/login?reason=session_expired';
         }
