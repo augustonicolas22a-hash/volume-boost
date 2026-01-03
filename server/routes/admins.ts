@@ -73,6 +73,16 @@ router.post('/master', async (req, res) => {
   try {
     const { nome, email, key, criadoPor } = req.body;
 
+    // Verificar se quem está criando é dono
+    const creator = await query<any[]>(
+      'SELECT `rank` FROM admins WHERE id = ?',
+      [criadoPor]
+    );
+
+    if (creator.length === 0 || creator[0].rank !== 'dono') {
+      return res.status(403).json({ error: 'Apenas donos podem criar masters' });
+    }
+
     const existing = await query<any[]>(
       'SELECT id FROM admins WHERE email = ?',
       [email]
@@ -83,7 +93,7 @@ router.post('/master', async (req, res) => {
     }
 
     const result = await query<any>(
-      'INSERT INTO admins (nome, email, `key`, `rank`, criado_por) VALUES (?, ?, ?, ?, ?)',
+      'INSERT INTO admins (nome, email, `key`, `rank`, criado_por, creditos) VALUES (?, ?, ?, ?, ?, 0)',
       [nome, email, key, 'master', criadoPor]
     );
 
@@ -99,6 +109,16 @@ router.post('/reseller', async (req, res) => {
   try {
     const { nome, email, key, criadoPor } = req.body;
 
+    // Verificar se quem está criando é master
+    const creator = await query<any[]>(
+      'SELECT `rank` FROM admins WHERE id = ?',
+      [criadoPor]
+    );
+
+    if (creator.length === 0 || creator[0].rank !== 'master') {
+      return res.status(403).json({ error: 'Apenas masters podem criar revendedores' });
+    }
+
     const existing = await query<any[]>(
       'SELECT id FROM admins WHERE email = ?',
       [email]
@@ -109,7 +129,7 @@ router.post('/reseller', async (req, res) => {
     }
 
     const result = await query<any>(
-      'INSERT INTO admins (nome, email, `key`, `rank`, criado_por) VALUES (?, ?, ?, ?, ?)',
+      'INSERT INTO admins (nome, email, `key`, `rank`, criado_por, creditos) VALUES (?, ?, ?, ?, ?, 0)',
       [nome, email, key, 'revendedor', criadoPor]
     );
 
