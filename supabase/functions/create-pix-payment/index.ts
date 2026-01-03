@@ -9,17 +9,26 @@ const corsHeaders = {
 // Server-side price tiers - MUST match frontend exactly
 const PRICE_TIERS = [
   { credits: 10, unitPrice: 14, total: 140 },
+  { credits: 15, unitPrice: 13.80, total: 207 },
   { credits: 25, unitPrice: 13.50, total: 337.50 },
+  { credits: 30, unitPrice: 13.30, total: 399 },
   { credits: 50, unitPrice: 13, total: 650 },
+  { credits: 75, unitPrice: 12.50, total: 937.50 },
   { credits: 100, unitPrice: 12, total: 1200 },
-  { credits: 150, unitPrice: 11, total: 1650 },
-  { credits: 200, unitPrice: 10.50, total: 2100 },
-  { credits: 250, unitPrice: 10, total: 2500 },
-  { credits: 400, unitPrice: 9.50, total: 3800 },
+  { credits: 150, unitPrice: 11.50, total: 1725 },
+  { credits: 200, unitPrice: 11, total: 2200 },
+  { credits: 250, unitPrice: 10.50, total: 2625 },
+  { credits: 300, unitPrice: 10.20, total: 3060 },
+  { credits: 350, unitPrice: 10, total: 3500 },
+  { credits: 400, unitPrice: 9.80, total: 3920 },
+  { credits: 500, unitPrice: 9.60, total: 4800 },
+  { credits: 550, unitPrice: 9.50, total: 5225 },
+  { credits: 600, unitPrice: 9.40, total: 5640 },
+  { credits: 650, unitPrice: 9.30, total: 6045 },
 ];
 
 // Allowed credit packages - ONLY these are valid
-const ALLOWED_PACKAGES = [10, 25, 50, 100, 150, 200, 250, 400];
+const ALLOWED_PACKAGES = [10, 15, 25, 30, 50, 75, 100, 150, 200, 250, 300, 350, 400, 500, 550, 600, 650];
 
 function calculatePrice(quantity: number): { unitPrice: number; total: number } | null {
   // Only allow exact package amounts
