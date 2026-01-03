@@ -80,7 +80,7 @@ export function Sidebar() {
             <Button
               variant="ghost"
               className={cn(
-                'w-full justify-start gap-3 h-11',
+                'w-full justify-start gap-3 h-11 hover:bg-primary/10 hover:text-primary',
                 location.pathname === item.href && 'bg-primary/10 text-primary'
               )}
             >
