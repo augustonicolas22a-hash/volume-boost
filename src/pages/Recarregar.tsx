@@ -17,13 +17,22 @@ import ReactCanvasConfetti from 'react-canvas-confetti';
 // Base price is R$14, discounts increase with quantity
 const CREDIT_PACKAGES = [
   { credits: 10, unitPrice: 14, total: 140 },
+  { credits: 15, unitPrice: 13.80, total: 207 },
   { credits: 25, unitPrice: 13.50, total: 337.50 },
+  { credits: 30, unitPrice: 13.30, total: 399 },
   { credits: 50, unitPrice: 13, total: 650 },
+  { credits: 75, unitPrice: 12.50, total: 937.50 },
   { credits: 100, unitPrice: 12, total: 1200 },
-  { credits: 150, unitPrice: 11, total: 1650 },
-  { credits: 200, unitPrice: 10.50, total: 2100 },
-  { credits: 250, unitPrice: 10, total: 2500 },
-  { credits: 400, unitPrice: 9.50, total: 3800 },
+  { credits: 150, unitPrice: 11.50, total: 1725 },
+  { credits: 200, unitPrice: 11, total: 2200 },
+  { credits: 250, unitPrice: 10.50, total: 2625 },
+  { credits: 300, unitPrice: 10.20, total: 3060 },
+  { credits: 350, unitPrice: 10, total: 3500 },
+  { credits: 400, unitPrice: 9.80, total: 3920 },
+  { credits: 500, unitPrice: 9.60, total: 4800 },
+  { credits: 550, unitPrice: 9.50, total: 5225 },
+  { credits: 600, unitPrice: 9.40, total: 5640 },
+  { credits: 650, unitPrice: 9.30, total: 6045 },
 ];
 
 const BASE_PRICE = 14; // Price without discount
@@ -35,7 +44,7 @@ function calculateSavings(pkg: typeof CREDIT_PACKAGES[0]) {
   return { savings, percentOff };
 }
 
-// Get package index from slider value (0-7)
+// Get package index from slider value
 function getPackageFromSlider(value: number): typeof CREDIT_PACKAGES[0] {
   return CREDIT_PACKAGES[Math.min(value, CREDIT_PACKAGES.length - 1)];
 }
@@ -359,102 +368,107 @@ export default function Recarregar() {
             </CardDescription>
           </CardHeader>
           <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0 space-y-6">
-            {/* Slider Section */}
-            <div className="bg-muted/30 rounded-xl p-6">
-              <div className="text-center mb-6">
-                <div className="text-4xl sm:text-5xl font-bold text-primary mb-2">
-                  {selectedPackage.credits}
-                </div>
-                <div className="text-lg text-muted-foreground">créditos</div>
-              </div>
-
-              <div className="px-2 mb-6">
-                <Slider
-                  value={[sliderValue]}
-                  onValueChange={handleSliderChange}
-                  max={CREDIT_PACKAGES.length - 1}
-                  step={1}
-                  className="w-full"
-                />
-                <div className="flex justify-between mt-2 text-xs text-muted-foreground">
-                  <span>10</span>
-                  <span>50</span>
-                  <span>100</span>
-                  <span>200</span>
-                  <span>400</span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 text-center">
-                <div className="bg-background rounded-lg p-3">
-                  <div className="text-sm text-muted-foreground">Preço por unidade</div>
-                  <div className="text-xl font-bold text-foreground">
-                    R$ {selectedPackage.unitPrice.toFixed(2)}
-                  </div>
-                  {selectedPackage.unitPrice < BASE_PRICE && (
-                    <div className="text-xs text-muted-foreground line-through">
-                      R$ {BASE_PRICE.toFixed(2)}
+            {/* Package Cards Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+              {CREDIT_PACKAGES.slice(0, 10).map((pkg, index) => {
+                const { savings, percentOff } = calculateSavings(pkg);
+                return (
+                  <button
+                    key={pkg.credits}
+                    onClick={() => handleSelectPackage(pkg, index)}
+                    className={`p-3 rounded-lg border-2 transition-all text-left relative ${
+                      selectedPackage.credits === pkg.credits
+                        ? 'border-primary bg-primary/10'
+                        : 'border-muted hover:border-primary/50'
+                    }`}
+                  >
+                    {savings > 0 && (
+                      <div className="absolute -top-2 -right-2 bg-green-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                        -{percentOff}%
+                      </div>
+                    )}
+                    <div className="text-xl font-bold text-foreground">{pkg.credits}</div>
+                    <div className="text-xs text-muted-foreground">créditos</div>
+                    <div className="mt-1">
+                      <Badge variant="secondary" className="text-[10px]">
+                        R$ {pkg.unitPrice.toFixed(2)}/un
+                      </Badge>
                     </div>
-                  )}
-                </div>
-                <div className="bg-background rounded-lg p-3">
-                  <div className="text-sm text-muted-foreground">Total</div>
-                  <div className="text-xl font-bold text-primary">
-                    R$ {selectedPackage.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </div>
-                </div>
-              </div>
-
-              {calculateSavings(selectedPackage).savings > 0 && (
-                <div className="mt-4 flex items-center justify-center gap-2 text-green-600">
-                  <TrendingDown className="h-4 w-4" />
-                  <span className="font-medium">
-                    Você economiza R$ {calculateSavings(selectedPackage).savings.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} ({calculateSavings(selectedPackage).percentOff}% off)
-                  </span>
-                </div>
-              )}
+                    <div className="mt-1 text-sm font-semibold text-primary">
+                      R$ {pkg.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </div>
+                  </button>
+                );
+              })}
             </div>
 
-            {/* Quick Select Buttons */}
+            {/* More packages - smaller buttons */}
             <div>
-              <p className="text-sm text-muted-foreground mb-3">Ou selecione rapidamente:</p>
+              <p className="text-xs text-muted-foreground mb-2">Mais opções:</p>
               <div className="flex flex-wrap gap-2">
-                {CREDIT_PACKAGES.map((pkg, index) => {
+                {CREDIT_PACKAGES.slice(10).map((pkg, i) => {
+                  const index = i + 10;
                   const { percentOff } = calculateSavings(pkg);
                   return (
                     <button
                       key={pkg.credits}
                       onClick={() => handleSelectPackage(pkg, index)}
-                      className={`px-3 py-2 rounded-lg border transition-all text-sm relative ${
+                      className={`px-3 py-2 rounded-lg border transition-all text-sm ${
                         selectedPackage.credits === pkg.credits
                           ? 'border-primary bg-primary text-primary-foreground'
                           : 'border-muted bg-muted/50 hover:border-primary/50'
                       }`}
                     >
                       {pkg.credits}
-                      {Number(percentOff) > 0 && (
-                        <span className={`ml-1 text-xs ${selectedPackage.credits === pkg.credits ? 'text-primary-foreground/80' : 'text-green-600'}`}>
-                          -{percentOff}%
-                        </span>
-                      )}
+                      <span className={`ml-1 text-xs ${selectedPackage.credits === pkg.credits ? 'text-primary-foreground/80' : 'text-green-600'}`}>
+                        -{percentOff}%
+                      </span>
                     </button>
                   );
                 })}
               </div>
             </div>
 
-            {/* Payment Button */}
+            {/* Slider Section */}
+            <div className="bg-muted/30 rounded-xl p-4">
+              <p className="text-xs text-muted-foreground mb-3">Ou arraste para selecionar:</p>
+              <Slider
+                value={[sliderValue]}
+                onValueChange={handleSliderChange}
+                max={CREDIT_PACKAGES.length - 1}
+                step={1}
+                className="w-full"
+              />
+              <div className="flex justify-between mt-2 text-[10px] text-muted-foreground">
+                <span>10</span>
+                <span>50</span>
+                <span>100</span>
+                <span>200</span>
+                <span>350</span>
+                <span>500</span>
+                <span>650</span>
+              </div>
+            </div>
+
+            {/* Payment Summary */}
             <div className="p-4 rounded-lg gradient-green text-success-foreground">
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center justify-between mb-2">
                 <div>
                   <p className="text-sm opacity-90">Pacote selecionado</p>
                   <p className="text-2xl font-bold">{selectedPackage.credits} créditos</p>
+                  <p className="text-xs opacity-80">R$ {selectedPackage.unitPrice.toFixed(2)} por unidade</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm opacity-90">Total a pagar</p>
+                  <p className="text-sm opacity-90">Total</p>
                   <p className="text-2xl font-bold">
                     R$ {selectedPackage.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
+                  {calculateSavings(selectedPackage).savings > 0 && (
+                    <p className="text-xs font-medium flex items-center justify-end gap-1">
+                      <TrendingDown className="h-3 w-3" />
+                      Economia: R$ {calculateSavings(selectedPackage).savings.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </p>
+                  )}
                 </div>
               </div>
               <div className="flex flex-col sm:flex-row gap-3">
