@@ -28,8 +28,8 @@ async function testDatabaseConnection() {
   console.log(`   Tipo: MySQL / MariaDB`);
   console.log(`   Host: ${process.env.DB_HOST || 'localhost'}`);
   console.log(`   Porta: ${process.env.DB_PORT || '3306'}`);
-  console.log(`   Banco: ${process.env.DB_NAME || 'data_sistemas'}`);
-  console.log(`   Usuário: ${process.env.DB_USER || 'root'}`);
+  console.log(`   Banco: ${process.env.DB_NAME || 'teste'}`);
+  console.log(`   Usuário: ${process.env.DB_USER || 'ventura'}`);
   console.log('─────────────────────────────────────────────────────────────────');
   
   try {
@@ -143,7 +143,8 @@ app.get('/api/health', async (req, res) => {
       timestamp: new Date().toISOString() 
     });
   }
-});
+}
+);
 
 // Iniciar servidor
 async function startServer() {
