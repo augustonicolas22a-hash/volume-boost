@@ -296,4 +296,33 @@ router.post('/goal', async (req, res) => {
   }
 });
 
+// Métricas de pagamentos (apenas PAID)
+router.get('/metrics', async (_req, res) => {
+  try {
+    // Contar total de operações (todos os pagamentos)
+    const allPayments = await query<any[]>('SELECT id FROM pix_payments');
+    const totalOperations = allPayments.length;
+
+    // Métricas apenas de pagamentos PAID
+    const paidPayments = await query<any[]>(
+      'SELECT amount, credits FROM pix_payments WHERE status = ?',
+      ['PAID']
+    );
+    
+    const totalPaidDeposits = paidPayments.length;
+    const totalPaidValue = paidPayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+    const avgTicket = totalPaidDeposits > 0 ? totalPaidValue / totalPaidDeposits : 0;
+
+    res.json({
+      totalOperations,       // Total de operações (todos os IDs)
+      totalPaidDeposits,     // Quantidade de depósitos PAID
+      totalPaidValue,        // Valor total dos PAID (receita)
+      avgTicket,             // Ticket médio dos PAID
+    });
+  } catch (error) {
+    console.error('Erro ao buscar métricas de pagamentos:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
 export default router;

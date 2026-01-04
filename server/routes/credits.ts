@@ -161,19 +161,31 @@ router.get('/transactions/all', async (_req, res) => {
   }
 });
 
-// Get metrics
+// Get metrics (depósitos de pix_payments PAID + transferências de credit_transactions)
 router.get('/metrics', async (_req, res) => {
   try {
-    const transactions = await query<any[]>('SELECT amount, total_price, transaction_type FROM credit_transactions');
-    const deposits = transactions.filter(tx => tx.transaction_type === 'recharge');
-    const transfers = transactions.filter(tx => tx.transaction_type === 'transfer');
-    const totalDepositValue = deposits.reduce((sum, tx) => sum + (Number(tx.total_price) || 0), 0);
-    const avgTicket = deposits.length > 0 ? totalDepositValue / deposits.length : 0;
+    // Métricas de pagamentos PIX (apenas PAID)
+    const paidPayments = await query<any[]>(
+      'SELECT amount FROM pix_payments WHERE status = ?',
+      ['PAID']
+    );
+    const totalDeposits = paidPayments.length;
+    const totalDepositValue = paidPayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+    const avgTicket = totalDeposits > 0 ? totalDepositValue / totalDeposits : 0;
+
+    // Métricas de transferências
+    const transfers = await query<any[]>(
+      'SELECT amount FROM credit_transactions WHERE transaction_type = ?',
+      ['transfer']
+    );
+    const totalTransfers = transfers.length;
+    const totalTransferCredits = transfers.reduce((sum, tx) => sum + (tx.amount || 0), 0);
+
     res.json({
-      totalDeposits: deposits.length,
+      totalDeposits,
       totalDepositValue,
-      totalTransfers: transfers.length,
-      totalTransferCredits: transfers.reduce((sum, tx) => sum + (tx.amount || 0), 0),
+      totalTransfers,
+      totalTransferCredits,
       avgTicket,
     });
   } catch (error) {
