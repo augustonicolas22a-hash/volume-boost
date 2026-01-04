@@ -10,7 +10,8 @@ import {
   Send,
   Crown,
   Shield,
-  Menu
+  Menu,
+  History
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
@@ -33,6 +34,7 @@ const navItems: NavItem[] = [
   { label: 'Recarregar', icon: CreditCard, href: '/recarregar', roles: ['master'] },
   { label: 'Meus Revendedores', icon: Users, href: '/revendedores', roles: ['master'] },
   { label: 'Transferir Créditos', icon: Send, href: '/transferir', roles: ['master'] },
+  { label: 'Histórico & Métricas', icon: History, href: '/historico-transferencias', roles: ['master'] },
   { label: 'Criar Revendedor', icon: UserPlus, href: '/criar-revendedor', roles: ['master'] },
 ];
 

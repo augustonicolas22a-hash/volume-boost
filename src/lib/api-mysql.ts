@@ -183,6 +183,21 @@ export const mysqlApi = {
     getMonthlyData: async () => {
       return fetchAPI('/credits/monthly-data');
     },
+
+    getMasterMetrics: async (masterId: number) => {
+      return fetchAPI(`/credits/master-metrics/${masterId}`);
+    },
+
+    getMasterTransfers: async (masterId: number) => {
+      return fetchAPI(`/credits/master-transfers/${masterId}`);
+    },
+
+    setMasterGoal: async (masterId: number, year: number, month: number, targetRevenue: number) => {
+      return fetchAPI('/credits/master-goal', {
+        method: 'POST',
+        body: JSON.stringify({ masterId, year, month, targetRevenue })
+      });
+    },
   },
 
   payments: {
