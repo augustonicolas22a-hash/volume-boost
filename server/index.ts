@@ -9,17 +9,26 @@ import adminRoutes from './routes/admins';
 import creditRoutes from './routes/credits';
 import paymentRoutes from './routes/payments';
 
-// Carrega variáveis de ambiente:
-// - quando o backend é iniciado dentro de /server, o .env pode estar na raiz do projeto
-const envLocal = path.resolve(process.cwd(), '.env');
-const envRoot = path.resolve(process.cwd(), '..', '.env');
-if (fs.existsSync(envLocal)) {
-  config({ path: envLocal });
-} else if (fs.existsSync(envRoot)) {
-  config({ path: envRoot });
-} else {
-  // fallback padrão
+// Carrega variáveis de ambiente (prioridade: .env.local > .env)
+const envFiles = [
+  path.resolve(process.cwd(), '.env.local'),
+  path.resolve(process.cwd(), '.env'),
+  path.resolve(process.cwd(), '..', '.env.local'),
+  path.resolve(process.cwd(), '..', '.env'),
+];
+
+let envLoaded = false;
+for (const envPath of envFiles) {
+  if (fs.existsSync(envPath)) {
+    config({ path: envPath });
+    console.log(`📁 Carregando variáveis de: ${envPath}`);
+    envLoaded = true;
+    break;
+  }
+}
+if (!envLoaded) {
   config();
+  console.log('⚠️ Nenhum arquivo .env encontrado, usando variáveis do sistema');
 }
 
 const app = express();
@@ -99,14 +108,22 @@ async function testDatabaseConnection() {
   }
 }
 
-// CORS (dev-friendly): aceita múltiplas origens locais (5173/8080/127.0.0.1) e produção
+// CORS (dev-friendly): aceita múltiplas origens locais e produção
 const allowedOrigins = new Set(
   [
     process.env.CLIENT_URL,
     'http://localhost:5173',
+    'http://localhost:5174',
+    'http://localhost:5175',
     'http://127.0.0.1:5173',
+    'http://127.0.0.1:5174',
+    'http://127.0.0.1:5175',
     'http://localhost:8080',
     'http://127.0.0.1:8080',
+    // VPS IPs - adicione mais se necessário
+    'http://191.96.79.187:5173',
+    'http://191.96.79.187:5174',
+    'http://191.96.79.187:5175',
     'https://painel.datasistemas.online',
     'http://painel.datasistemas.online',
   ].filter(Boolean) as string[]

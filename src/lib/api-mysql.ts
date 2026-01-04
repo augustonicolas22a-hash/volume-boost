@@ -6,8 +6,14 @@ function normalizeApiBase(url: string) {
   return base.endsWith("/api") ? base : `${base}/api`;
 }
 
-const RAW_API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
+// Em produção (VPS), usa caminho relativo para evitar problemas de CORS/localhost
+const RAW_API_URL = import.meta.env.VITE_API_URL || 
+  (typeof window !== 'undefined' && window.location.hostname !== 'localhost' 
+    ? `${window.location.protocol}//${window.location.hostname}:4000/api`
+    : "http://localhost:4000/api");
 const API_URL = normalizeApiBase(RAW_API_URL);
+
+console.log('🔌 API URL configurada:', API_URL);
 function getStoredSession(): { adminId: number; sessionToken: string } | null {
   const stored = localStorage.getItem('admin');
   if (!stored) return null;
