@@ -99,7 +99,7 @@ async function testDatabaseConnection() {
   }
 }
 
-// CORS (dev-friendly): aceita múltiplas origens locais (5173/8080/127.0.0.1)
+// CORS (dev-friendly): aceita múltiplas origens locais (5173/8080/127.0.0.1) e produção
 const allowedOrigins = new Set(
   [
     process.env.CLIENT_URL,
@@ -107,6 +107,8 @@ const allowedOrigins = new Set(
     'http://127.0.0.1:5173',
     'http://localhost:8080',
     'http://127.0.0.1:8080',
+    'https://painel.datasistemas.online',
+    'http://painel.datasistemas.online',
   ].filter(Boolean) as string[]
 );
 
