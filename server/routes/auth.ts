@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import { query } from '../db';
 import { v4 as uuidv4 } from 'uuid';
-import bcrypt from 'bcryptjs';
 
 const router = Router();
 
@@ -33,42 +32,14 @@ router.post('/login', async (req, res) => {
     const providedKey = String(key).trim();
     const storedKeyRaw = String((admin as any).stored_key ?? '').trim();
 
-    // Normalizar hashes bcrypt gerados por outras libs (ex: PHP usa $2y$)
-    const storedKeyNormalized = storedKeyRaw.startsWith('$2y$')
-      ? storedKeyRaw.replace('$2y$', '$2a$')
-      : storedKeyRaw;
-
-    const looksBcrypt = storedKeyRaw.startsWith('$2a$') || storedKeyRaw.startsWith('$2b$') || storedKeyRaw.startsWith('$2y$');
-
-    let bcryptMatch = false;
-    let bcryptError: unknown = null;
-
-    if (looksBcrypt) {
-      try {
-        // Tenta com o hash normalizado; se falhar, tenta com o original
-        bcryptMatch = await bcrypt.compare(providedKey, storedKeyNormalized);
-        if (!bcryptMatch && storedKeyNormalized !== storedKeyRaw) {
-          bcryptMatch = await bcrypt.compare(providedKey, storedKeyRaw);
-        }
-      } catch (err) {
-        bcryptError = err;
-      }
-    }
-
-    const plainMatch = providedKey === storedKeyRaw;
-    const match = looksBcrypt ? bcryptMatch : plainMatch;
+    // MySQL nativo (somente texto): comparar diretamente
+    const match = providedKey === storedKeyRaw;
 
     // Debug (não loga a chave; só metadados)
     console.log('[AUTH] login tentativa', {
       email,
       providedLen: providedKey.length,
       storedLen: storedKeyRaw.length,
-      hashPrefix: storedKeyRaw.slice(0, 4),
-      hashPrefixNormalized: storedKeyNormalized.slice(0, 4),
-      looksBcrypt,
-      bcryptMatch,
-      plainMatch,
-      bcryptError: bcryptError ? String(bcryptError) : null,
       match,
     });
 
@@ -80,11 +51,9 @@ router.post('/login', async (req, res) => {
           ? {
               debug: {
                 emailFound: true,
-                looksBcrypt,
-                hashPrefix: storedKeyRaw.slice(0, 4),
-                bcryptMatch,
-                plainMatch,
-                bcryptError: bcryptError ? String(bcryptError) : null,
+                providedLen: providedKey.length,
+                storedLen: storedKeyRaw.length,
+                match,
               },
             }
           : {}),
@@ -114,34 +83,6 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// Debug: testar comparação bcrypt (SÓ quando AUTH_DEBUG=true)
-router.post('/debug-compare', async (req, res) => {
-  if (process.env.AUTH_DEBUG !== 'true') {
-    return res.status(404).json({ error: 'Not found' });
-  }
-
-  const { plain, hash } = req.body as { plain?: string; hash?: string };
-  const plainStr = String(plain ?? '');
-  const hashRaw = String(hash ?? '');
-  const hashNormalized = hashRaw.startsWith('$2y$') ? hashRaw.replace('$2y$', '$2a$') : hashRaw;
-
-  try {
-    const matchNormalized = await bcrypt.compare(plainStr, hashNormalized);
-    const matchRaw = hashRaw === hashNormalized ? matchNormalized : await bcrypt.compare(plainStr, hashRaw);
-
-    return res.json({
-      ok: true,
-      plainLen: plainStr.length,
-      hashPrefix: hashRaw.slice(0, 4),
-      hashPrefixNormalized: hashNormalized.slice(0, 4),
-      matchNormalized,
-      matchRaw,
-    });
-  } catch (e) {
-    return res.json({ ok: false, error: String(e) });
-  }
-});
- 
 // Validar PIN
 router.post('/validate-pin', async (req, res) => {
   try {
@@ -161,39 +102,13 @@ router.post('/validate-pin', async (req, res) => {
     const providedPin = String(pin ?? '').trim();
     const storedPinRaw = String(storedPin ?? '').trim();
 
-    const storedPinNormalized = storedPinRaw.startsWith('$2y$')
-      ? storedPinRaw.replace('$2y$', '$2a$')
-      : storedPinRaw;
-
-    const looksBcrypt = storedPinRaw.startsWith('$2a$') || storedPinRaw.startsWith('$2b$') || storedPinRaw.startsWith('$2y$');
-
-    let bcryptMatch = false;
-    let bcryptError: unknown = null;
-
-    if (looksBcrypt) {
-      try {
-        bcryptMatch = await bcrypt.compare(providedPin, storedPinNormalized);
-        if (!bcryptMatch && storedPinNormalized !== storedPinRaw) {
-          bcryptMatch = await bcrypt.compare(providedPin, storedPinRaw);
-        }
-      } catch (err) {
-        bcryptError = err;
-      }
-    }
-
-    const plainMatch = storedPinRaw === providedPin;
-    const valid = looksBcrypt ? bcryptMatch : plainMatch;
+    // MySQL nativo (somente texto): comparar diretamente
+    const valid = storedPinRaw === providedPin;
 
     console.log('[AUTH] validate-pin', {
       adminId,
       providedLen: providedPin.length,
       storedLen: storedPinRaw.length,
-      hashPrefix: storedPinRaw.slice(0, 4),
-      hashPrefixNormalized: storedPinNormalized.slice(0, 4),
-      looksBcrypt,
-      bcryptMatch,
-      plainMatch,
-      bcryptError: bcryptError ? String(bcryptError) : null,
       valid,
     });
 
@@ -213,8 +128,8 @@ router.post('/set-pin', async (req, res) => {
       return res.status(400).json({ error: 'PIN deve ter 4 dígitos numéricos' });
     }
 
-    const pinHash = await bcrypt.hash(pin, 10);
-    await query('UPDATE admins SET pin = ? WHERE id = ?', [pinHash, adminId]);
+    // MySQL nativo (somente texto): salvar PIN em texto
+    await query('UPDATE admins SET pin = ? WHERE id = ?', [pin, adminId]);
 
     res.json({ success: true });
   } catch (error) {
