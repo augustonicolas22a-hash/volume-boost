@@ -21,7 +21,11 @@ router.post('/login', async (req, res) => {
     );
 
     if (admins.length === 0) {
-      return res.status(401).json({ error: 'Credenciais inválidas' });
+      const debugEnabled = process.env.AUTH_DEBUG === 'true';
+      return res.status(401).json({
+        error: 'Credenciais inválidas',
+        ...(debugEnabled ? { debug: { emailFound: false } } : {}),
+      });
     }
 
     const admin = admins[0];
@@ -69,7 +73,22 @@ router.post('/login', async (req, res) => {
     });
 
     if (!match) {
-      return res.status(401).json({ error: 'Credenciais inválidas' });
+      const debugEnabled = process.env.AUTH_DEBUG === 'true';
+      return res.status(401).json({
+        error: 'Credenciais inválidas',
+        ...(debugEnabled
+          ? {
+              debug: {
+                emailFound: true,
+                looksBcrypt,
+                hashPrefix: storedKeyRaw.slice(0, 4),
+                bcryptMatch,
+                plainMatch,
+                bcryptError: bcryptError ? String(bcryptError) : null,
+              },
+            }
+          : {}),
+      });
     }
 
     const sessionToken = uuidv4();
