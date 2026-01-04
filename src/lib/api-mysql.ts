@@ -1,8 +1,13 @@
 // Cliente API para MySQL (via Node.js backend)
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+function normalizeApiBase(url: string) {
+  const base = url.replace(/\/+$/, "");
+  // Se o usuário passar só o domínio (ex: https://api.site.com), adicionamos /api
+  return base.endsWith("/api") ? base : `${base}/api`;
+}
 
-// Helper para obter dados da sessão armazenada
+const RAW_API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
+const API_URL = normalizeApiBase(RAW_API_URL);
 function getStoredSession(): { adminId: number; sessionToken: string } | null {
   const stored = localStorage.getItem('admin');
   if (!stored) return null;
