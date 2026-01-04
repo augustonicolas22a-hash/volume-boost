@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Slider } from '@/components/ui/slider';
 import { Navigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
+import api from '@/lib/api';
 import { toast } from 'sonner';
 import { CreditCard, Tag, QrCode, Loader2, Clock, CheckCircle, XCircle, History, RefreshCw, TrendingDown, Bitcoin, Star } from 'lucide-react';
 import ReactCanvasConfetti from 'react-canvas-confetti';
@@ -130,13 +130,7 @@ export default function Recarregar() {
     if (!admin) return;
     
     try {
-      const { data } = await supabase
-        .from('pix_payments')
-        .select('id, amount, credits, status, created_at, paid_at')
-        .eq('admin_id', admin.id)
-        .order('created_at', { ascending: false })
-        .limit(10);
-
+      const data = await api.payments.getHistory(admin.id);
       setPaymentHistory(data || []);
     } catch (error) {
       console.error('Erro ao buscar histórico:', error);
@@ -220,19 +214,15 @@ export default function Recarregar() {
     hasPlayedSound.current = false;
     
     try {
-      const response = await supabase.functions.invoke('create-pix-payment', {
-        body: {
-          credits: selectedPackage.credits,
-          adminId: admin.id,
-          adminName: admin.nome,
-          sessionToken: admin.session_token, // Send session token for validation
-        }
-      });
+      const pixPayment = await api.payments.createPix(
+        selectedPackage.credits,
+        admin.id,
+        admin.nome,
+        admin.session_token
+      );
 
-      if (response.error) throw response.error;
-      if (response.data?.error) throw new Error(response.data.details || response.data.error);
+      if (pixPayment.error) throw new Error(pixPayment.details || pixPayment.error);
 
-      const pixPayment = response.data;
       setPixData(pixPayment);
       setShowPixModal(true);
       setPaymentConfirmed(false);
@@ -261,11 +251,7 @@ export default function Recarregar() {
 
     const checkPayment = async () => {
       try {
-        const { data: payment } = await supabase
-          .from('pix_payments')
-          .select('status, credits')
-          .eq('transaction_id', transactionId)
-          .single();
+        const payment = await api.payments.checkStatus(transactionId);
 
         if (payment?.status === 'PAID') {
           if (checkIntervalRef.current) {
@@ -279,14 +265,10 @@ export default function Recarregar() {
           playNotificationSound();
           fire();
           
-          const { data: updatedAdmin } = await supabase
-            .from('admins')
-            .select('creditos')
-            .eq('id', admin.id)
-            .single();
-
-          if (updatedAdmin) {
-            updateAdmin({ ...admin, creditos: updatedAdmin.creditos });
+          // Atualizar créditos do admin
+          const balanceData = await api.credits.getBalance(admin.id);
+          if (balanceData) {
+            updateAdmin({ ...admin, creditos: balanceData.credits });
           }
           
           fetchPaymentHistory();
@@ -298,7 +280,7 @@ export default function Recarregar() {
           setTimeout(() => {
             setShowPixModal(false);
             setPixData(null);
-            setSelectedPackage(null);
+            setSelectedPackage(CREDIT_PACKAGES[0]);
           }, 3000);
           return;
         }
