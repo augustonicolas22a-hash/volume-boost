@@ -27,22 +27,44 @@ router.post('/login', async (req, res) => {
     const admin = admins[0];
 
     const providedKey = String(key).trim();
-    let storedKey = String((admin as any).stored_key ?? '').trim();
+    const storedKeyRaw = String((admin as any).stored_key ?? '').trim();
 
-    // Converter $2y$ (PHP) para $2a$ (compatível com bcryptjs)
-    if (storedKey.startsWith('$2y$')) {
-      storedKey = storedKey.replace('$2y$', '$2a$');
+    // Normalizar hashes bcrypt gerados por outras libs (ex: PHP usa $2y$)
+    const storedKeyNormalized = storedKeyRaw.startsWith('$2y$')
+      ? storedKeyRaw.replace('$2y$', '$2a$')
+      : storedKeyRaw;
+
+    const looksBcrypt = storedKeyRaw.startsWith('$2a$') || storedKeyRaw.startsWith('$2b$') || storedKeyRaw.startsWith('$2y$');
+
+    let bcryptMatch = false;
+    let bcryptError: unknown = null;
+
+    if (looksBcrypt) {
+      try {
+        // Tenta com o hash normalizado; se falhar, tenta com o original
+        bcryptMatch = await bcrypt.compare(providedKey, storedKeyNormalized);
+        if (!bcryptMatch && storedKeyNormalized !== storedKeyRaw) {
+          bcryptMatch = await bcrypt.compare(providedKey, storedKeyRaw);
+        }
+      } catch (err) {
+        bcryptError = err;
+      }
     }
 
-    const isBcryptHash = storedKey.startsWith('$2a$') || storedKey.startsWith('$2b$');
-    const match = isBcryptHash ? await bcrypt.compare(providedKey, storedKey) : providedKey === storedKey;
+    const plainMatch = providedKey === storedKeyRaw;
+    const match = looksBcrypt ? bcryptMatch : plainMatch;
 
-    // Debug (não loga a chave em si)
+    // Debug (não loga a chave; só metadados)
     console.log('[AUTH] login tentativa', {
       email,
       providedLen: providedKey.length,
-      storedLen: storedKey.length,
-      bcrypt: isBcryptHash,
+      storedLen: storedKeyRaw.length,
+      hashPrefix: storedKeyRaw.slice(0, 4),
+      hashPrefixNormalized: storedKeyNormalized.slice(0, 4),
+      looksBcrypt,
+      bcryptMatch,
+      plainMatch,
+      bcryptError: bcryptError ? String(bcryptError) : null,
       match,
     });
 
@@ -90,21 +112,41 @@ router.post('/validate-pin', async (req, res) => {
     const storedPin = result[0].pin;
 
     const providedPin = String(pin ?? '').trim();
-    let storedPinStr = String(storedPin ?? '').trim();
+    const storedPinRaw = String(storedPin ?? '').trim();
 
-    // Converter $2y$ (PHP) para $2a$ (compatível com bcryptjs)
-    if (storedPinStr.startsWith('$2y$')) {
-      storedPinStr = storedPinStr.replace('$2y$', '$2a$');
+    const storedPinNormalized = storedPinRaw.startsWith('$2y$')
+      ? storedPinRaw.replace('$2y$', '$2a$')
+      : storedPinRaw;
+
+    const looksBcrypt = storedPinRaw.startsWith('$2a$') || storedPinRaw.startsWith('$2b$') || storedPinRaw.startsWith('$2y$');
+
+    let bcryptMatch = false;
+    let bcryptError: unknown = null;
+
+    if (looksBcrypt) {
+      try {
+        bcryptMatch = await bcrypt.compare(providedPin, storedPinNormalized);
+        if (!bcryptMatch && storedPinNormalized !== storedPinRaw) {
+          bcryptMatch = await bcrypt.compare(providedPin, storedPinRaw);
+        }
+      } catch (err) {
+        bcryptError = err;
+      }
     }
 
-    const isBcryptHash = storedPinStr.startsWith('$2a$') || storedPinStr.startsWith('$2b$');
-    const valid = isBcryptHash ? await bcrypt.compare(providedPin, storedPinStr) : storedPinStr === providedPin;
+    const plainMatch = storedPinRaw === providedPin;
+    const valid = looksBcrypt ? bcryptMatch : plainMatch;
 
     console.log('[AUTH] validate-pin', {
       adminId,
       providedLen: providedPin.length,
-      storedLen: storedPinStr.length,
-      bcrypt: isBcryptHash,
+      storedLen: storedPinRaw.length,
+      hashPrefix: storedPinRaw.slice(0, 4),
+      hashPrefixNormalized: storedPinNormalized.slice(0, 4),
+      looksBcrypt,
+      bcryptMatch,
+      plainMatch,
+      bcryptError: bcryptError ? String(bcryptError) : null,
       valid,
     });
 
