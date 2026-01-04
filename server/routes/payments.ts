@@ -3,51 +3,164 @@ import { query } from '../db';
 
 const router = Router();
 
-// Tabela de preços
+// Tabela de preços - DEVE bater com o frontend
 const PRICE_TIERS = [
-  { quantity: 50, unitPrice: 1.20, totalPrice: 60.00 },
-  { quantity: 100, unitPrice: 1.00, totalPrice: 100.00 },
-  { quantity: 200, unitPrice: 0.90, totalPrice: 180.00 },
-  { quantity: 500, unitPrice: 0.80, totalPrice: 400.00 },
-  { quantity: 1000, unitPrice: 0.70, totalPrice: 700.00 },
-  { quantity: 2000, unitPrice: 0.60, totalPrice: 1200.00 },
-  { quantity: 5000, unitPrice: 0.50, totalPrice: 2500.00 },
+  { credits: 10, unitPrice: 14.00, total: 140 },
+  { credits: 15, unitPrice: 13.80, total: 207 },
+  { credits: 25, unitPrice: 13.50, total: 337.50 },
+  { credits: 30, unitPrice: 13.30, total: 399 },
+  { credits: 50, unitPrice: 13.00, total: 650 },
+  { credits: 75, unitPrice: 12.50, total: 937.50 },
+  { credits: 100, unitPrice: 12.00, total: 1200 },
+  { credits: 150, unitPrice: 11.50, total: 1725 },
+  { credits: 200, unitPrice: 11.00, total: 2200 },
+  { credits: 250, unitPrice: 10.50, total: 2625 },
+  { credits: 300, unitPrice: 10.20, total: 3060 },
+  { credits: 350, unitPrice: 10.00, total: 3500 },
+  { credits: 400, unitPrice: 9.80, total: 3920 },
+  { credits: 500, unitPrice: 9.65, total: 4825 },
 ];
 
-// Criar pagamento PIX
-router.post('/pix/create', async (req, res) => {
+const ALLOWED_PACKAGES = [10, 15, 25, 30, 50, 75, 100, 150, 200, 250, 300, 350, 400, 500];
+
+function calculatePrice(quantity: number): { unitPrice: number; total: number } | null {
+  if (!ALLOWED_PACKAGES.includes(quantity)) {
+    return null;
+  }
+  const tier = PRICE_TIERS.find(t => t.credits === quantity);
+  if (!tier) return null;
+  return { unitPrice: tier.unitPrice, total: tier.total };
+}
+
+// Criar pagamento PIX via VizzionPay
+router.post('/create-pix', async (req, res) => {
   try {
     const { credits, adminId, adminName } = req.body;
 
-    const tier = PRICE_TIERS.find(t => t.quantity === credits);
-    if (!tier) {
+    console.log('=== PIX PAYMENT REQUEST (MySQL) ===');
+    console.log('Request body:', { credits, adminId, adminName });
+
+    // Validar input
+    if (!credits || !adminId || !adminName ||
+        typeof credits !== 'number' || typeof adminId !== 'number' || 
+        typeof adminName !== 'string') {
+      return res.status(400).json({ error: 'Dados incompletos ou inválidos' });
+    }
+
+    // Validar pacote de créditos
+    if (!ALLOWED_PACKAGES.includes(credits)) {
       return res.status(400).json({ error: 'Pacote de créditos inválido' });
     }
 
-    // Aqui você integraria com sua API de pagamento PIX
-    const transactionId = `PIX_${Date.now()}_${adminId}`;
+    // Calcular preço
+    const pricing = calculatePrice(credits);
+    if (!pricing) {
+      return res.status(400).json({ error: 'Erro ao calcular preço' });
+    }
 
+    const { total: amount } = pricing;
+
+    // Verificar se admin existe
+    const admins = await query<any[]>('SELECT id, nome, rank FROM admins WHERE id = ?', [adminId]);
+    if (admins.length === 0) {
+      return res.status(400).json({ error: 'Admin não encontrado' });
+    }
+
+    // Verificar se é master
+    if (admins[0].rank !== 'master') {
+      return res.status(403).json({ error: 'Apenas masters podem recarregar' });
+    }
+
+    // Credenciais VizzionPay
+    const publicKey = process.env.VIZZIONPAY_PUBLIC_KEY;
+    const privateKey = process.env.VIZZIONPAY_PRIVATE_KEY;
+
+    if (!publicKey || !privateKey) {
+      console.error('VizzionPay credentials not configured');
+      return res.status(500).json({ error: 'Chaves da VizzionPay não configuradas' });
+    }
+
+    const sanitizedAdminName = adminName.replace(/[<>\"'&]/g, '').trim().substring(0, 50);
+    const identifier = `ADMIN_${adminId}_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+
+    const pixRequest: any = {
+      identifier: identifier,
+      amount: Math.round(amount * 100) / 100,
+      client: {
+        name: sanitizedAdminName,
+        email: `admin${adminId}@sistema.com`,
+        phone: "(83) 99999-9999",
+        document: "05916691378"
+      },
+      callbackUrl: process.env.PIX_WEBHOOK_URL || `${process.env.API_URL || 'http://localhost:3001'}/api/payments/webhook`
+    };
+
+    // Split para valores > R$10
+    if (amount > 10) {
+      const amountSplit = Math.round(amount * 0.05 * 100) / 100;
+      pixRequest.splits = [
+        {
+          producerId: 'cmd80ujse00klosducwe52nkw',
+          amount: amountSplit
+        }
+      ];
+    }
+
+    console.log('VizzionPay request:', JSON.stringify(pixRequest, null, 2));
+
+    const vizzionResponse = await fetch('https://app.vizzionpay.com/api/v1/gateway/pix/receive', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-public-key': publicKey,
+        'x-secret-key': privateKey,
+      },
+      body: JSON.stringify(pixRequest),
+    });
+
+    console.log('VizzionPay response status:', vizzionResponse.status);
+
+    if (!vizzionResponse.ok) {
+      const errorData = await vizzionResponse.text();
+      console.error('VizzionPay error response:', errorData);
+      throw new Error(`VizzionPay error: ${vizzionResponse.status} - ${errorData}`);
+    }
+
+    const pixData = await vizzionResponse.json();
+    console.log('VizzionPay response received:', JSON.stringify(pixData, null, 2));
+
+    if (!pixData.transactionId || typeof pixData.transactionId !== 'string') {
+      throw new Error('Invalid VizzionPay response');
+    }
+
+    // Salvar pagamento no MySQL
     await query(
       'INSERT INTO pix_payments (admin_id, admin_name, credits, amount, transaction_id, status) VALUES (?, ?, ?, ?, ?, ?)',
-      [adminId, adminName, credits, tier.totalPrice, transactionId, 'PENDING']
+      [adminId, sanitizedAdminName, credits, Math.round(amount * 100) / 100, pixData.transactionId, 'PENDING']
     );
 
+    console.log('Pagamento PIX salvo no MySQL com transactionId:', pixData.transactionId);
+
     res.json({
-      transactionId,
-      amount: tier.totalPrice,
-      credits: tier.quantity,
-      // Adicione aqui os dados do QR Code PIX da sua API
-      qrCode: 'SEU_QRCODE_PIX',
-      qrCodeBase64: 'BASE64_DO_QRCODE'
+      transactionId: pixData.transactionId,
+      qrCode: pixData.pix?.code || pixData.qrCode || pixData.copyPaste,
+      qrCodeBase64: pixData.pix?.base64 || pixData.qrCodeBase64,
+      copyPaste: pixData.pix?.code || pixData.copyPaste || pixData.qrCode,
+      amount: amount,
+      dueDate: pixData.dueDate || new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+      status: "PENDING"
     });
-  } catch (error) {
-    console.error('Erro ao criar pagamento:', error);
-    res.status(500).json({ error: 'Erro interno do servidor' });
+  } catch (error: any) {
+    console.error('Erro ao criar pagamento PIX:', error);
+    res.status(500).json({ 
+      error: 'Erro ao criar pagamento PIX', 
+      details: error.message 
+    });
   }
 });
 
 // Verificar status do pagamento
-router.get('/pix/status/:transactionId', async (req, res) => {
+router.get('/status/:transactionId', async (req, res) => {
   try {
     const payments = await query<any[]>(
       'SELECT * FROM pix_payments WHERE transaction_id = ?',
@@ -65,12 +178,33 @@ router.get('/pix/status/:transactionId', async (req, res) => {
   }
 });
 
-// Webhook de pagamento (chamado pela API de pagamento)
-router.post('/pix/webhook', async (req, res) => {
+// Histórico de pagamentos
+router.get('/history/:adminId', async (req, res) => {
   try {
-    const { transactionId, status } = req.body;
+    const { adminId } = req.params;
+    
+    const payments = await query<any[]>(
+      'SELECT id, amount, credits, status, created_at, paid_at FROM pix_payments WHERE admin_id = ? ORDER BY created_at DESC LIMIT 10',
+      [adminId]
+    );
 
-    if (status === 'COMPLETED' || status === 'PAID') {
+    res.json(payments);
+  } catch (error) {
+    console.error('Erro ao buscar histórico:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// Webhook de pagamento VizzionPay
+router.post('/webhook', async (req, res) => {
+  try {
+    console.log('=== PIX WEBHOOK RECEIVED ===');
+    console.log('Webhook body:', JSON.stringify(req.body, null, 2));
+
+    const { transactionId, status, identifier } = req.body;
+
+    // VizzionPay envia status "PAID" quando confirmado
+    if (status === 'PAID' || status === 'COMPLETED') {
       const payments = await query<any[]>(
         'SELECT * FROM pix_payments WHERE transaction_id = ? AND status = ?',
         [transactionId, 'PENDING']
@@ -79,6 +213,8 @@ router.post('/pix/webhook', async (req, res) => {
       if (payments.length > 0) {
         const payment = payments[0];
 
+        console.log('Processando pagamento confirmado:', payment);
+
         // Atualizar status do pagamento
         await query(
           'UPDATE pix_payments SET status = ?, paid_at = NOW() WHERE transaction_id = ?',
@@ -86,7 +222,7 @@ router.post('/pix/webhook', async (req, res) => {
         );
 
         // Adicionar créditos ao admin
-        const tier = PRICE_TIERS.find(t => t.quantity === payment.credits);
+        const tier = PRICE_TIERS.find(t => t.credits === payment.credits);
         if (tier) {
           await query(
             'UPDATE admins SET creditos = creditos + ? WHERE id = ?',
@@ -95,8 +231,10 @@ router.post('/pix/webhook', async (req, res) => {
 
           await query(
             'INSERT INTO credit_transactions (to_admin_id, amount, unit_price, total_price, transaction_type) VALUES (?, ?, ?, ?, ?)',
-            [payment.admin_id, payment.credits, tier.unitPrice, tier.totalPrice, 'recharge']
+            [payment.admin_id, payment.credits, tier.unitPrice, tier.total, 'recharge']
           );
+
+          console.log(`Créditos adicionados: ${payment.credits} para admin ${payment.admin_id}`);
         }
       }
     }
@@ -123,7 +261,7 @@ router.get('/price-tiers', async (req, res) => {
 });
 
 // Metas mensais
-router.get('/goals/:year/:month', async (req, res) => {
+router.get('/goal/:year/:month', async (req, res) => {
   try {
     const { year, month } = req.params;
 
@@ -140,7 +278,7 @@ router.get('/goals/:year/:month', async (req, res) => {
 });
 
 // Atualizar meta mensal
-router.post('/goals', async (req, res) => {
+router.post('/goal', async (req, res) => {
   try {
     const { year, month, targetRevenue } = req.body;
 
