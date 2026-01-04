@@ -23,7 +23,7 @@ if (fs.existsSync(envLocal)) {
 }
 
 const app = express();
-const PORT = process.env.PORT || 5173;
+const PORT = process.env.PORT || 4000;
 
 // Banner do sistema
 console.log('\n');
