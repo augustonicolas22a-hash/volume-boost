@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { query } from '../db';
 import { v4 as uuidv4 } from 'uuid';
+import bcrypt from 'bcryptjs';
 
 const router = Router();
 
@@ -26,17 +27,21 @@ router.post('/login', async (req, res) => {
     const admin = admins[0];
 
     const providedKey = String(key).trim();
-    const storedKey = String(admin.stored_key ?? '').trim();
+    const storedKey = String((admin as any).stored_key ?? '').trim();
 
-    // Debug (não loga a chave em si, apenas tamanhos)
+    const isBcryptHash = storedKey.startsWith('$2a$') || storedKey.startsWith('$2b$') || storedKey.startsWith('$2y$');
+    const match = isBcryptHash ? await bcrypt.compare(providedKey, storedKey) : providedKey === storedKey;
+
+    // Debug (não loga a chave em si)
     console.log('[AUTH] login tentativa', {
       email,
       providedLen: providedKey.length,
       storedLen: storedKey.length,
-      match: providedKey === storedKey,
+      bcrypt: isBcryptHash,
+      match,
     });
 
-    if (providedKey !== storedKey) {
+    if (!match) {
       return res.status(401).json({ error: 'Credenciais inválidas' });
     }
 
@@ -79,13 +84,17 @@ router.post('/validate-pin', async (req, res) => {
 
     const storedPin = result[0].pin;
 
-    // Comparar PIN (texto plano), tolerando espaços
-    const valid = String(storedPin ?? '').trim() === String(pin ?? '').trim();
+    const providedPin = String(pin ?? '').trim();
+    const storedPinStr = String(storedPin ?? '').trim();
+
+    const isBcryptHash = storedPinStr.startsWith('$2a$') || storedPinStr.startsWith('$2b$') || storedPinStr.startsWith('$2y$');
+    const valid = isBcryptHash ? await bcrypt.compare(providedPin, storedPinStr) : storedPinStr === providedPin;
 
     console.log('[AUTH] validate-pin', {
       adminId,
-      providedLen: String(pin ?? '').trim().length,
-      storedLen: String(storedPin ?? '').trim().length,
+      providedLen: providedPin.length,
+      storedLen: storedPinStr.length,
+      bcrypt: isBcryptHash,
       valid,
     });
 
@@ -105,7 +114,8 @@ router.post('/set-pin', async (req, res) => {
       return res.status(400).json({ error: 'PIN deve ter 4 dígitos numéricos' });
     }
 
-    await query('UPDATE admins SET pin = ? WHERE id = ?', [pin, adminId]);
+    const pinHash = await bcrypt.hash(pin, 10);
+    await query('UPDATE admins SET pin = ? WHERE id = ?', [pinHash, adminId]);
 
     res.json({ success: true });
   } catch (error) {
