@@ -27,9 +27,14 @@ router.post('/login', async (req, res) => {
     const admin = admins[0];
 
     const providedKey = String(key).trim();
-    const storedKey = String((admin as any).stored_key ?? '').trim();
+    let storedKey = String((admin as any).stored_key ?? '').trim();
 
-    const isBcryptHash = storedKey.startsWith('$2a$') || storedKey.startsWith('$2b$') || storedKey.startsWith('$2y$');
+    // Converter $2y$ (PHP) para $2a$ (compatível com bcryptjs)
+    if (storedKey.startsWith('$2y$')) {
+      storedKey = storedKey.replace('$2y$', '$2a$');
+    }
+
+    const isBcryptHash = storedKey.startsWith('$2a$') || storedKey.startsWith('$2b$');
     const match = isBcryptHash ? await bcrypt.compare(providedKey, storedKey) : providedKey === storedKey;
 
     // Debug (não loga a chave em si)
@@ -85,9 +90,14 @@ router.post('/validate-pin', async (req, res) => {
     const storedPin = result[0].pin;
 
     const providedPin = String(pin ?? '').trim();
-    const storedPinStr = String(storedPin ?? '').trim();
+    let storedPinStr = String(storedPin ?? '').trim();
 
-    const isBcryptHash = storedPinStr.startsWith('$2a$') || storedPinStr.startsWith('$2b$') || storedPinStr.startsWith('$2y$');
+    // Converter $2y$ (PHP) para $2a$ (compatível com bcryptjs)
+    if (storedPinStr.startsWith('$2y$')) {
+      storedPinStr = storedPinStr.replace('$2y$', '$2a$');
+    }
+
+    const isBcryptHash = storedPinStr.startsWith('$2a$') || storedPinStr.startsWith('$2b$');
     const valid = isBcryptHash ? await bcrypt.compare(providedPin, storedPinStr) : storedPinStr === providedPin;
 
     console.log('[AUTH] validate-pin', {
