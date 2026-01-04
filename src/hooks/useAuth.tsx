@@ -48,6 +48,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             );
             
             if (valid) {
+              // Sessão válida - buscar saldo atualizado do servidor
+              try {
+                const balanceData = await api.credits.getBalance(parsedAdmin.id);
+                if (balanceData) {
+                  parsedAdmin.creditos = balanceData.credits;
+                  localStorage.setItem('admin', JSON.stringify(parsedAdmin));
+                }
+              } catch (e) {
+                console.error('Error fetching balance:', e);
+              }
+              
               setAdmin(parsedAdmin);
               setRole(parsedAdmin.rank as AppRole);
               setCredits(parsedAdmin.creditos);
