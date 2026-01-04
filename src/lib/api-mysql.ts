@@ -6,11 +6,38 @@ function normalizeApiBase(url: string) {
   return base.endsWith("/api") ? base : `${base}/api`;
 }
 
-// Em produção (VPS), usa caminho relativo para evitar problemas de CORS/localhost
-const RAW_API_URL = import.meta.env.VITE_API_URL || 
-  (typeof window !== 'undefined' && window.location.hostname !== 'localhost' 
-    ? `${window.location.protocol}//${window.location.hostname}:4000/api`
-    : "http://localhost:4000/api");
+// Em produção (domínio), prefira mesma origem (Nginx faz proxy em /api)
+// Isso evita problemas de CORS e principalmente "mixed content" (site em HTTPS chamando API em HTTP)
+const RAW_ENV_API_URL = import.meta.env.VITE_API_URL as string | undefined;
+
+const RAW_API_URL = (() => {
+  if (RAW_ENV_API_URL) {
+    // Se o painel estiver em HTTPS e a URL estiver em HTTP no mesmo host, faz upgrade para HTTPS
+    if (
+      typeof window !== 'undefined' &&
+      window.location.protocol === 'https:' &&
+      RAW_ENV_API_URL.startsWith('http://')
+    ) {
+      try {
+        const parsed = new URL(RAW_ENV_API_URL);
+        if (parsed.hostname === window.location.hostname) {
+          parsed.protocol = 'https:';
+          return parsed.toString().replace(/\/+$/, '');
+        }
+      } catch {
+        // ignora e usa como veio
+      }
+    }
+    return RAW_ENV_API_URL;
+  }
+
+  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
+    return `${window.location.origin}/api`;
+  }
+
+  return 'http://localhost:4000/api';
+})();
+
 const API_URL = normalizeApiBase(RAW_API_URL);
 
 console.log('🔌 API URL configurada:', API_URL);
