@@ -23,7 +23,7 @@ async function fetchAPI(endpoint: string, options: RequestInit = {}) {
   const session = getStoredSession();
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...options.headers as Record<string, string>
+    ...(options.headers as Record<string, string>),
   };
 
   if (session) {
@@ -31,13 +31,23 @@ async function fetchAPI(endpoint: string, options: RequestInit = {}) {
     headers['X-Session-Token'] = session.sessionToken;
   }
 
-  const response = await fetch(`${API_URL}${endpoint}`, {
-    ...options,
-    headers
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${API_URL}${endpoint}`, {
+      ...options,
+      headers,
+    });
+  } catch (err) {
+    // Geralmente TypeError: Failed to fetch (DNS/SSL/CORS/preflight)
+    throw new Error(
+      `Falha ao conectar com a API (${API_URL}). Verifique se a URL existe, se há HTTPS válido e se o CORS permite a origem do painel.`
+    );
+  }
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Erro de conexão' }));
+    const error = await response
+      .json()
+      .catch(() => ({ error: 'Erro de conexão' }));
     throw new Error(error.error || 'Erro na requisição');
   }
 
