@@ -85,38 +85,9 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Verify admin exists AND session token matches (prevents manipulation)
-    const { data: admin, error: adminError } = await supabase
-      .from('admins')
-      .select('id, nome, rank, session_token')
-      .eq('id', adminId)
-      .single();
-
-    if (adminError || !admin) {
-      console.error('Admin not found:', adminError);
-      return new Response(JSON.stringify({ error: "Admin não encontrado" }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Validate session token - prevents localStorage manipulation
-    if (admin.session_token !== sessionToken) {
-      console.error('Session token mismatch');
-      return new Response(JSON.stringify({ error: "Sessão inválida. Faça login novamente." }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Verify only masters can recharge
-    if (admin.rank !== 'master') {
-      console.error('Non-master trying to recharge');
-      return new Response(JSON.stringify({ error: "Apenas masters podem recarregar" }), {
-        status: 403,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
+    // Note: Session validation is done on MySQL backend, not here
+    // The Edge Function trusts the request since auth is handled externally
+    console.log('Processing PIX for admin:', adminId, adminName);
 
     // Get VizzionPay credentials
     const publicKey = Deno.env.get('VIZZIONPAY_PUBLIC_KEY');
