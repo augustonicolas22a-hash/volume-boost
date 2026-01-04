@@ -114,6 +114,34 @@ router.post('/login', async (req, res) => {
   }
 });
 
+// Debug: testar comparação bcrypt (SÓ quando AUTH_DEBUG=true)
+router.post('/debug-compare', async (req, res) => {
+  if (process.env.AUTH_DEBUG !== 'true') {
+    return res.status(404).json({ error: 'Not found' });
+  }
+
+  const { plain, hash } = req.body as { plain?: string; hash?: string };
+  const plainStr = String(plain ?? '');
+  const hashRaw = String(hash ?? '');
+  const hashNormalized = hashRaw.startsWith('$2y$') ? hashRaw.replace('$2y$', '$2a$') : hashRaw;
+
+  try {
+    const matchNormalized = await bcrypt.compare(plainStr, hashNormalized);
+    const matchRaw = hashRaw === hashNormalized ? matchNormalized : await bcrypt.compare(plainStr, hashRaw);
+
+    return res.json({
+      ok: true,
+      plainLen: plainStr.length,
+      hashPrefix: hashRaw.slice(0, 4),
+      hashPrefixNormalized: hashNormalized.slice(0, 4),
+      matchNormalized,
+      matchRaw,
+    });
+  } catch (e) {
+    return res.json({ ok: false, error: String(e) });
+  }
+});
+ 
 // Validar PIN
 router.post('/validate-pin', async (req, res) => {
   try {
