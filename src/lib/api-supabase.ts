@@ -265,6 +265,31 @@ export const supabaseApi = {
     getMonthlyData: async () => {
       return [];
     },
+
+    getMasterMetrics: async (_masterId: number) => {
+      return {
+        totalTransferred: 0,
+        totalTransfers: 0,
+        monthTransferred: 0,
+        monthTransfers: 0,
+        totalRecharged: 0,
+        totalSpent: 0,
+        monthRecharged: 0,
+        monthSpent: 0,
+        monthlyGoal: 0,
+        totalResellers: 0,
+        estimatedRevenue: 0,
+        estimatedProfit: 0,
+      };
+    },
+
+    getMasterTransfers: async (_masterId: number) => {
+      return [];
+    },
+
+    setMasterGoal: async (_masterId: number, _year: number, _month: number, _targetRevenue: number) => {
+      return { success: false };
+    },
   },
 
   payments: {

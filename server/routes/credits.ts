@@ -211,4 +211,138 @@ router.get('/monthly-data', async (_req, res) => {
   }
 });
 
+// Métricas específicas de um Master (transferências para seus revendedores)
+router.get('/master-metrics/:masterId', async (req, res) => {
+  try {
+    const { masterId } = req.params;
+    const now = new Date();
+    const currentMonth = now.getMonth() + 1;
+    const currentYear = now.getFullYear();
+
+    // Total de créditos transferidos pelo master (para seus revendedores)
+    const transfersTotal = await query<any[]>(
+      `SELECT COALESCE(SUM(amount), 0) as total_transferred, COUNT(*) as total_transfers
+       FROM credit_transactions 
+       WHERE from_admin_id = ? AND transaction_type = 'transfer'`,
+      [masterId]
+    );
+
+    // Transferências do mês atual
+    const transfersMonth = await query<any[]>(
+      `SELECT COALESCE(SUM(amount), 0) as month_transferred, COUNT(*) as month_transfers
+       FROM credit_transactions 
+       WHERE from_admin_id = ? AND transaction_type = 'transfer'
+       AND MONTH(created_at) = ? AND YEAR(created_at) = ?`,
+      [masterId, currentMonth, currentYear]
+    );
+
+    // Total de recargas do master (quanto ele recarregou de créditos)
+    const rechargesTotal = await query<any[]>(
+      `SELECT COALESCE(SUM(amount), 0) as total_recharged, COALESCE(SUM(total_price), 0) as total_spent
+       FROM credit_transactions 
+       WHERE to_admin_id = ? AND transaction_type = 'recharge'`,
+      [masterId]
+    );
+
+    // Recargas do mês
+    const rechargesMonth = await query<any[]>(
+      `SELECT COALESCE(SUM(amount), 0) as month_recharged, COALESCE(SUM(total_price), 0) as month_spent
+       FROM credit_transactions 
+       WHERE to_admin_id = ? AND transaction_type = 'recharge'
+       AND MONTH(created_at) = ? AND YEAR(created_at) = ?`,
+      [masterId, currentMonth, currentYear]
+    );
+
+    // Meta do master para o mês (usar monthly_goals se existir)
+    const masterGoal = await query<any[]>(
+      `SELECT target_revenue FROM monthly_goals 
+       WHERE year = ? AND month = ?`,
+      [currentYear, currentMonth]
+    );
+
+    // Total de revendedores do master
+    const resellersCount = await query<any[]>(
+      `SELECT COUNT(*) as count FROM admins WHERE criado_por = ? AND rank = 'revendedor'`,
+      [masterId]
+    );
+
+    // Lucro estimado (transferências x R$20 mínimo por crédito - custo)
+    const totalTransferred = Number(transfersTotal[0]?.total_transferred) || 0;
+    const totalSpent = Number(rechargesTotal[0]?.total_spent) || 0;
+    const estimatedRevenue = totalTransferred * 20; // R$20 mínimo por crédito vendido
+    const estimatedProfit = estimatedRevenue - totalSpent;
+
+    res.json({
+      totalTransferred,
+      totalTransfers: Number(transfersTotal[0]?.total_transfers) || 0,
+      monthTransferred: Number(transfersMonth[0]?.month_transferred) || 0,
+      monthTransfers: Number(transfersMonth[0]?.month_transfers) || 0,
+      totalRecharged: Number(rechargesTotal[0]?.total_recharged) || 0,
+      totalSpent,
+      monthRecharged: Number(rechargesMonth[0]?.month_recharged) || 0,
+      monthSpent: Number(rechargesMonth[0]?.month_spent) || 0,
+      monthlyGoal: Number(masterGoal[0]?.target_revenue) || 0,
+      totalResellers: Number(resellersCount[0]?.count) || 0,
+      estimatedRevenue,
+      estimatedProfit,
+    });
+  } catch (error) {
+    console.error('Erro ao buscar métricas do master:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// Histórico de transferências de um master para seus revendedores
+router.get('/master-transfers/:masterId', async (req, res) => {
+  try {
+    const { masterId } = req.params;
+    
+    const transfers = await query<any[]>(
+      `SELECT ct.id, ct.amount, ct.created_at, 
+              ta.nome as reseller_name, ta.email as reseller_email
+       FROM credit_transactions ct
+       JOIN admins ta ON ct.to_admin_id = ta.id
+       WHERE ct.from_admin_id = ? AND ct.transaction_type = 'transfer'
+       ORDER BY ct.created_at DESC
+       LIMIT 100`,
+      [masterId]
+    );
+
+    res.json(transfers);
+  } catch (error) {
+    console.error('Erro ao buscar transferências do master:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// Atualizar/criar meta do master
+router.post('/master-goal', async (req, res) => {
+  try {
+    const { masterId, year, month, targetRevenue } = req.body;
+
+    // Verificar se já existe uma meta para este mês
+    const existing = await query<any[]>(
+      'SELECT id FROM monthly_goals WHERE year = ? AND month = ?',
+      [year, month]
+    );
+
+    if (existing.length > 0) {
+      await query(
+        'UPDATE monthly_goals SET target_revenue = ?, updated_at = NOW() WHERE year = ? AND month = ?',
+        [targetRevenue, year, month]
+      );
+    } else {
+      await query(
+        'INSERT INTO monthly_goals (year, month, target_revenue) VALUES (?, ?, ?)',
+        [year, month, targetRevenue]
+      );
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Erro ao salvar meta:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
 export default router;
