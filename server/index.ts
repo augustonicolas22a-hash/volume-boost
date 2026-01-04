@@ -1,13 +1,26 @@
 import express from 'express';
 import cors from 'cors';
 import { config } from 'dotenv';
+import path from 'path';
+import fs from 'fs';
 import { pool } from './db';
 import authRoutes from './routes/auth';
 import adminRoutes from './routes/admins';
 import creditRoutes from './routes/credits';
 import paymentRoutes from './routes/payments';
 
-config();
+// Carrega variáveis de ambiente:
+// - quando o backend é iniciado dentro de /server, o .env pode estar na raiz do projeto
+const envLocal = path.resolve(process.cwd(), '.env');
+const envRoot = path.resolve(process.cwd(), '..', '.env');
+if (fs.existsSync(envLocal)) {
+  config({ path: envLocal });
+} else if (fs.existsSync(envRoot)) {
+  config({ path: envRoot });
+} else {
+  // fallback padrão
+  config();
+}
 
 const app = express();
 const PORT = process.env.PORT || 3001;
