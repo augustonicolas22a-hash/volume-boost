@@ -5,23 +5,22 @@ const router = Router();
 
 // Tabela de preços - DEVE bater com o frontend
 const PRICE_TIERS = [
+  { credits: 5, unitPrice: 14.00, total: 70 },
   { credits: 10, unitPrice: 14.00, total: 140 },
-  { credits: 15, unitPrice: 13.80, total: 207 },
   { credits: 25, unitPrice: 13.50, total: 337.50 },
-  { credits: 30, unitPrice: 13.30, total: 399 },
   { credits: 50, unitPrice: 13.00, total: 650 },
   { credits: 75, unitPrice: 12.50, total: 937.50 },
   { credits: 100, unitPrice: 12.00, total: 1200 },
   { credits: 150, unitPrice: 11.50, total: 1725 },
-  { credits: 200, unitPrice: 11.00, total: 2200 },
-  { credits: 250, unitPrice: 10.50, total: 2625 },
-  { credits: 300, unitPrice: 10.20, total: 3060 },
-  { credits: 350, unitPrice: 10.00, total: 3500 },
-  { credits: 400, unitPrice: 9.80, total: 3920 },
-  { credits: 500, unitPrice: 9.65, total: 4825 },
+  { credits: 200, unitPrice: 10.00, total: 2000 },
+  { credits: 250, unitPrice: 9.50, total: 2375 },
+  { credits: 300, unitPrice: 9.00, total: 2700 },
+  { credits: 400, unitPrice: 8.50, total: 3400 },
+  { credits: 500, unitPrice: 8.00, total: 4000 },
+  { credits: 1000, unitPrice: 7.00, total: 7000 },
 ];
 
-const ALLOWED_PACKAGES = [10, 15, 25, 30, 50, 75, 100, 150, 200, 250, 300, 350, 400, 500];
+const ALLOWED_PACKAGES = [5, 10, 25, 50, 75, 100, 150, 200, 250, 300, 400, 500, 1000];
 
 function calculatePrice(quantity: number): { unitPrice: number; total: number } | null {
   if (!ALLOWED_PACKAGES.includes(quantity)) {
