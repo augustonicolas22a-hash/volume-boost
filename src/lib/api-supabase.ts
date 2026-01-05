@@ -212,6 +212,28 @@ export const supabaseApi = {
         byReseller: []
       };
     },
+
+    getResellerDetails: async (_resellerId: number) => {
+      // Supabase não tem as tabelas de documentos, retorna estrutura vazia
+      return {
+        reseller: null,
+        stats: {
+          totalCreditsReceived: 0,
+          creditsUsed: 0,
+          currentBalance: 0,
+          totalDocuments: 0,
+          totalCnh: 0,
+          totalRg: 0,
+          totalCarteira: 0
+        },
+        lastService: null,
+        documents: {
+          cnhs: [],
+          rgs: [],
+          carteiras: []
+        }
+      };
+    },
   },
 
   credits: {
