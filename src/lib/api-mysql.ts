@@ -188,6 +188,10 @@ export const mysqlApi = {
     getDashboardStats: async () => {
       return fetchAPI('/admins/stats/dashboard');
     },
+
+    getDocumentStats: async (masterId: number) => {
+      return fetchAPI(`/admins/stats/documents/${masterId}`);
+    },
   },
 
   credits: {
