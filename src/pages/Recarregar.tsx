@@ -10,8 +10,9 @@ import { Slider } from '@/components/ui/slider';
 import { Navigate } from 'react-router-dom';
 import api from '@/lib/api';
 import { toast } from 'sonner';
-import { CreditCard, Tag, QrCode, Loader2, Clock, CheckCircle, XCircle, History, RefreshCw, TrendingDown, Bitcoin, Star } from 'lucide-react';
+import { CreditCard, Tag, QrCode, Loader2, Clock, CheckCircle, XCircle, History, RefreshCw, TrendingDown, Bitcoin, Star, Crown, Gem, Info } from 'lucide-react';
 import ReactCanvasConfetti from 'react-canvas-confetti';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 // Fixed credit packages - NO custom input allowed
 // Base price is R$14, discounts increase with quantity
@@ -373,37 +374,54 @@ export default function Recarregar() {
                 <Badge variant="secondary" className="text-[10px]">Mais vendidos</Badge>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {POPULAR_PACKAGES.map((pkg) => {
-                  const { savings, percentOff } = calculateSavings(pkg);
-                  const index = CREDIT_PACKAGES.findIndex(p => p.credits === pkg.credits);
-                  return (
-                    <button
-                      key={pkg.credits}
-                      onClick={() => handleSelectPackage({ ...pkg, popular: false }, index)}
-                      className={`p-3 rounded-lg border-2 transition-all text-left relative ${
-                        selectedPackage.credits === pkg.credits
-                          ? 'border-primary bg-primary/10'
-                          : 'border-primary/30 bg-primary/5 hover:border-primary'
-                      }`}
-                    >
-                      {savings > 0 && (
-                        <div className="absolute -top-2 -right-2 bg-green-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
-                          -{percentOff}%
-                        </div>
-                      )}
-                      <div className="text-xl font-bold text-foreground">{pkg.credits}</div>
-                      <div className="text-xs text-muted-foreground">créditos</div>
-                      <div className="mt-1">
-                        <Badge variant="secondary" className="text-[10px]">
-                          R$ {pkg.unitPrice.toFixed(2)}/un
-                        </Badge>
-                      </div>
-                      <div className="mt-1 text-sm font-semibold text-primary">
-                        R$ {pkg.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      </div>
-                    </button>
-                  );
-                })}
+                <TooltipProvider>
+                  {POPULAR_PACKAGES.map((pkg) => {
+                    const { savings, percentOff } = calculateSavings(pkg);
+                    const index = CREDIT_PACKAGES.findIndex(p => p.credits === pkg.credits);
+                    return (
+                      <Tooltip key={pkg.credits}>
+                        <TooltipTrigger asChild>
+                          <button
+                            onClick={() => handleSelectPackage({ ...pkg, popular: false }, index)}
+                            className={`p-3 rounded-lg border-2 transition-all text-left relative ${
+                              selectedPackage.credits === pkg.credits
+                                ? 'border-primary bg-primary/10'
+                                : 'border-primary/30 bg-primary/5 hover:border-primary'
+                            }`}
+                          >
+                            {savings > 0 && (
+                              <div className="absolute -top-2 -right-2 bg-green-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                                -{percentOff}%
+                              </div>
+                            )}
+                            <div className="text-xl font-bold text-foreground">{pkg.credits}</div>
+                            <div className="text-xs text-muted-foreground">créditos</div>
+                            <div className="mt-1">
+                              <Badge variant="secondary" className="text-[10px]">
+                                R$ {pkg.unitPrice.toFixed(2)}/un
+                              </Badge>
+                            </div>
+                            <div className="mt-1 text-sm font-semibold text-primary">
+                              R$ {pkg.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            </div>
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-xs">
+                          <div className="text-sm space-y-1">
+                            <p className="font-semibold">{pkg.credits} créditos</p>
+                            <p className="text-muted-foreground">Preço por unidade: R$ {pkg.unitPrice.toFixed(2)}</p>
+                            {savings > 0 && (
+                              <>
+                                <p className="text-green-500">Economia: R$ {savings.toFixed(2)}</p>
+                                <p className="text-green-500 font-medium">{percentOff}% de desconto!</p>
+                              </>
+                            )}
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    );
+                  })}
+                </TooltipProvider>
               </div>
             </div>
 
@@ -415,37 +433,54 @@ export default function Recarregar() {
                 <Badge variant="outline" className="text-[10px] text-green-600 border-green-500">Melhor custo-benefício</Badge>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {INTERMEDIATE_PACKAGES.map((pkg) => {
-                  const { savings, percentOff } = calculateSavings(pkg);
-                  const index = CREDIT_PACKAGES.findIndex(p => p.credits === pkg.credits);
-                  return (
-                    <button
-                      key={pkg.credits}
-                      onClick={() => handleSelectPackage({ ...pkg, popular: false }, index)}
-                      className={`p-3 rounded-lg border-2 transition-all text-left relative ${
-                        selectedPackage.credits === pkg.credits
-                          ? 'border-primary bg-primary/10'
-                          : 'border-muted hover:border-primary/50'
-                      }`}
-                    >
-                      {savings > 0 && (
-                        <div className="absolute -top-2 -right-2 bg-green-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
-                          -{percentOff}%
-                        </div>
-                      )}
-                      <div className="text-xl font-bold text-foreground">{pkg.credits}</div>
-                      <div className="text-xs text-muted-foreground">créditos</div>
-                      <div className="mt-1">
-                        <Badge variant="secondary" className="text-[10px]">
-                          R$ {pkg.unitPrice.toFixed(2)}/un
-                        </Badge>
-                      </div>
-                      <div className="mt-1 text-sm font-semibold text-primary">
-                        R$ {pkg.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      </div>
-                    </button>
-                  );
-                })}
+                <TooltipProvider>
+                  {INTERMEDIATE_PACKAGES.map((pkg) => {
+                    const { savings, percentOff } = calculateSavings(pkg);
+                    const index = CREDIT_PACKAGES.findIndex(p => p.credits === pkg.credits);
+                    return (
+                      <Tooltip key={pkg.credits}>
+                        <TooltipTrigger asChild>
+                          <button
+                            onClick={() => handleSelectPackage({ ...pkg, popular: false }, index)}
+                            className={`p-3 rounded-lg border-2 transition-all text-left relative ${
+                              selectedPackage.credits === pkg.credits
+                                ? 'border-primary bg-primary/10'
+                                : 'border-muted hover:border-primary/50'
+                            }`}
+                          >
+                            {savings > 0 && (
+                              <div className="absolute -top-2 -right-2 bg-green-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                                -{percentOff}%
+                              </div>
+                            )}
+                            <div className="text-xl font-bold text-foreground">{pkg.credits}</div>
+                            <div className="text-xs text-muted-foreground">créditos</div>
+                            <div className="mt-1">
+                              <Badge variant="secondary" className="text-[10px]">
+                                R$ {pkg.unitPrice.toFixed(2)}/un
+                              </Badge>
+                            </div>
+                            <div className="mt-1 text-sm font-semibold text-primary">
+                              R$ {pkg.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            </div>
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-xs">
+                          <div className="text-sm space-y-1">
+                            <p className="font-semibold">{pkg.credits} créditos</p>
+                            <p className="text-muted-foreground">Preço por unidade: R$ {pkg.unitPrice.toFixed(2)}</p>
+                            {savings > 0 && (
+                              <>
+                                <p className="text-green-500">Economia: R$ {savings.toFixed(2)}</p>
+                                <p className="text-green-500 font-medium">{percentOff}% de desconto!</p>
+                              </>
+                            )}
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    );
+                  })}
+                </TooltipProvider>
               </div>
             </div>
 
@@ -457,37 +492,74 @@ export default function Recarregar() {
                 <Badge variant="outline" className="text-[10px] text-amber-600 border-amber-500">Máximo desconto</Badge>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-                {LARGE_PACKAGES.map((pkg) => {
-                  const { savings, percentOff } = calculateSavings(pkg);
-                  const index = CREDIT_PACKAGES.findIndex(p => p.credits === pkg.credits);
-                  return (
-                    <button
-                      key={pkg.credits}
-                      onClick={() => handleSelectPackage({ ...pkg, popular: false }, index)}
-                      className={`p-3 rounded-lg border-2 transition-all text-left relative ${
-                        selectedPackage.credits === pkg.credits
-                          ? 'border-primary bg-primary/10'
-                          : 'border-amber-500/30 bg-amber-500/5 hover:border-amber-500'
-                      }`}
-                    >
-                      {savings > 0 && (
-                        <div className="absolute -top-2 -right-2 bg-green-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
-                          -{percentOff}%
-                        </div>
-                      )}
-                      <div className="text-xl font-bold text-foreground">{pkg.credits}</div>
-                      <div className="text-xs text-muted-foreground">créditos</div>
-                      <div className="mt-1">
-                        <Badge variant="secondary" className="text-[10px]">
-                          R$ {pkg.unitPrice.toFixed(2)}/un
-                        </Badge>
-                      </div>
-                      <div className="mt-1 text-sm font-semibold text-primary">
-                        R$ {pkg.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      </div>
-                    </button>
-                  );
-                })}
+                <TooltipProvider>
+                  {LARGE_PACKAGES.map((pkg) => {
+                    const { savings, percentOff } = calculateSavings(pkg);
+                    const index = CREDIT_PACKAGES.findIndex(p => p.credits === pkg.credits);
+                    const isPremium = pkg.credits === 1000;
+                    
+                    return (
+                      <Tooltip key={pkg.credits}>
+                        <TooltipTrigger asChild>
+                          <button
+                            onClick={() => handleSelectPackage({ ...pkg, popular: false }, index)}
+                            className={`p-3 rounded-lg border-2 transition-all text-left relative ${
+                              isPremium
+                                ? selectedPackage.credits === pkg.credits
+                                  ? 'border-amber-400 bg-gradient-to-br from-amber-500/20 via-yellow-500/10 to-orange-500/20 ring-2 ring-amber-400/50 shadow-lg shadow-amber-500/20'
+                                  : 'border-amber-400/50 bg-gradient-to-br from-amber-500/10 via-yellow-500/5 to-orange-500/10 hover:border-amber-400 hover:shadow-lg hover:shadow-amber-500/20'
+                                : selectedPackage.credits === pkg.credits
+                                  ? 'border-primary bg-primary/10'
+                                  : 'border-amber-500/30 bg-amber-500/5 hover:border-amber-500'
+                            }`}
+                          >
+                            {isPremium && (
+                              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 shadow-md">
+                                <Crown className="h-3 w-3" />
+                                PREMIUM
+                              </div>
+                            )}
+                            {savings > 0 && !isPremium && (
+                              <div className="absolute -top-2 -right-2 bg-green-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                                -{percentOff}%
+                              </div>
+                            )}
+                            {isPremium && (
+                              <div className="absolute -top-2 -right-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full animate-pulse">
+                                -{percentOff}%
+                              </div>
+                            )}
+                            <div className={`text-xl font-bold ${isPremium ? 'text-amber-500' : 'text-foreground'}`}>
+                              {isPremium && <Gem className="h-4 w-4 inline mr-1 text-amber-500" />}
+                              {pkg.credits}
+                            </div>
+                            <div className="text-xs text-muted-foreground">créditos</div>
+                            <div className="mt-1">
+                              <Badge variant={isPremium ? "default" : "secondary"} className={`text-[10px] ${isPremium ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white border-0' : ''}`}>
+                                R$ {pkg.unitPrice.toFixed(2)}/un
+                              </Badge>
+                            </div>
+                            <div className={`mt-1 text-sm font-semibold ${isPremium ? 'text-amber-500' : 'text-primary'}`}>
+                              R$ {pkg.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            </div>
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-xs">
+                          <div className="text-sm space-y-1">
+                            <p className="font-semibold">{pkg.credits} créditos</p>
+                            <p className="text-muted-foreground">Preço por unidade: R$ {pkg.unitPrice.toFixed(2)}</p>
+                            {savings > 0 && (
+                              <>
+                                <p className="text-green-500">Economia: R$ {savings.toFixed(2)}</p>
+                                <p className="text-green-500 font-medium">{percentOff}% de desconto!</p>
+                              </>
+                            )}
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    );
+                  })}
+                </TooltipProvider>
               </div>
             </div>
 
