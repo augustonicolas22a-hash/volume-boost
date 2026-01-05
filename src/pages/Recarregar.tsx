@@ -16,20 +16,19 @@ import ReactCanvasConfetti from 'react-canvas-confetti';
 // Fixed credit packages - NO custom input allowed
 // Base price is R$14, discounts increase with quantity
 const CREDIT_PACKAGES = [
+  { credits: 5, unitPrice: 14.00, total: 70, popular: false },
   { credits: 10, unitPrice: 14.00, total: 140, popular: false },
-  { credits: 15, unitPrice: 13.80, total: 207, popular: false },
   { credits: 25, unitPrice: 13.50, total: 337.50, popular: false },
-  { credits: 30, unitPrice: 13.30, total: 399, popular: false },
   { credits: 50, unitPrice: 13.00, total: 650, popular: true },
   { credits: 75, unitPrice: 12.50, total: 937.50, popular: false },
   { credits: 100, unitPrice: 12.00, total: 1200, popular: true },
   { credits: 150, unitPrice: 11.50, total: 1725, popular: false },
-  { credits: 200, unitPrice: 11.00, total: 2200, popular: true },
-  { credits: 250, unitPrice: 10.50, total: 2625, popular: false },
-  { credits: 300, unitPrice: 10.20, total: 3060, popular: false },
-  { credits: 350, unitPrice: 10.00, total: 3500, popular: false },
-  { credits: 400, unitPrice: 9.80, total: 3920, popular: false },
-  { credits: 500, unitPrice: 9.65, total: 4825, popular: false },
+  { credits: 200, unitPrice: 10.00, total: 2000, popular: true },
+  { credits: 250, unitPrice: 9.50, total: 2375, popular: false },
+  { credits: 300, unitPrice: 9.00, total: 2700, popular: false },
+  { credits: 400, unitPrice: 8.50, total: 3400, popular: false },
+  { credits: 500, unitPrice: 8.00, total: 4000, popular: false },
+  { credits: 1000, unitPrice: 7.00, total: 7000, popular: false },
 ];
 
 const BASE_PRICE = 14; // Price without discount
@@ -417,23 +416,23 @@ export default function Recarregar() {
             </div>
 
             {/* Slider Section */}
-            <div className="bg-muted/30 rounded-xl p-4">
-              <p className="text-xs text-muted-foreground mb-3">Ou arraste para selecionar:</p>
+            <div className="bg-muted/30 rounded-xl p-6">
+              <p className="text-sm text-muted-foreground mb-4">Ou arraste para selecionar:</p>
               <Slider
                 value={[sliderValue]}
                 onValueChange={handleSliderChange}
                 max={CREDIT_PACKAGES.length - 1}
                 step={1}
-                className="w-full"
+                className="w-full h-3 [&>span:first-child]:h-3 [&>span:first-child>span]:h-6 [&>span:first-child>span]:w-6 [&>span:first-child>span]:border-4"
               />
-              <div className="flex justify-between mt-2 text-[10px] text-muted-foreground">
-                <span>10</span>
-                <span>50</span>
-                <span>100</span>
-                <span>200</span>
-                <span>350</span>
+              <div className="flex justify-between mt-4 text-xs text-muted-foreground">
+                <span>5</span>
+                <span>25</span>
+                <span>75</span>
+                <span>150</span>
+                <span>300</span>
                 <span>500</span>
-                <span>650</span>
+                <span>1000</span>
               </div>
             </div>
 
