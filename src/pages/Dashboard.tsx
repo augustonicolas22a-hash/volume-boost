@@ -2,11 +2,11 @@ import { useAuth } from '@/hooks/useAuth';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { StatsCard } from '@/components/dashboard/StatsCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CreditCard, Crown, Sparkles, TrendingUp, Users, Clock, FileText, IdCard, GraduationCap, Car } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { CreditCard, Crown, Sparkles, TrendingUp, Users, Clock, FileText, IdCard, GraduationCap, Car, Trophy, Medal, Award } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import api from '@/lib/api';
-
 interface TopReseller {
   id: number;
   nome: string;
@@ -190,11 +190,12 @@ export default function Dashboard() {
         {(role === 'master' || role === 'dono') && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
             {/* Top Resellers */}
-            <Card>
+            <Card className="border-2 border-primary/20 bg-gradient-to-br from-primary/5 via-transparent to-amber-500/5">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-                  <TrendingUp className="h-5 w-5 text-primary" />
+                  <Trophy className="h-5 w-5 text-yellow-500" />
                   Top Revendedores
+                  <Badge variant="secondary" className="text-[10px] ml-auto">Ranking</Badge>
                 </CardTitle>
                 <p className="text-sm text-muted-foreground">
                   Revendedores que mais receberam créditos
@@ -210,23 +211,42 @@ export default function Dashboard() {
                     {topResellers.map((reseller, index) => (
                       <div 
                         key={reseller.id} 
-                        className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
+                        className={`flex items-center justify-between p-3 rounded-lg transition-all ${
+                          index === 0 
+                            ? 'bg-gradient-to-r from-yellow-500/20 via-amber-500/10 to-transparent border border-yellow-500/30 shadow-sm' 
+                            : index === 1 
+                              ? 'bg-gradient-to-r from-gray-400/20 via-gray-300/10 to-transparent border border-gray-400/30' 
+                              : index === 2 
+                                ? 'bg-gradient-to-r from-amber-600/20 via-orange-500/10 to-transparent border border-amber-600/30' 
+                                : 'bg-muted/50'
+                        }`}
                       >
                         <div className="flex items-center gap-3">
-                          <span className={`
-                            w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold
-                            ${index === 0 ? 'bg-yellow-500 text-yellow-950' : 
-                              index === 1 ? 'bg-gray-400 text-gray-950' : 
-                              index === 2 ? 'bg-amber-600 text-amber-950' : 
-                              'bg-muted text-muted-foreground'}
-                          `}>
-                            {index + 1}
+                          {index === 0 ? (
+                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-yellow-400 to-amber-500 flex items-center justify-center shadow-md">
+                              <Trophy className="h-4 w-4 text-yellow-950" />
+                            </div>
+                          ) : index === 1 ? (
+                            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-gray-300 to-gray-400 flex items-center justify-center">
+                              <Medal className="h-4 w-4 text-gray-700" />
+                            </div>
+                          ) : index === 2 ? (
+                            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
+                              <Award className="h-4 w-4 text-amber-950" />
+                            </div>
+                          ) : (
+                            <span className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-xs font-bold text-muted-foreground">
+                              {index + 1}
+                            </span>
+                          )}
+                          <span className={`font-medium text-sm sm:text-base ${index === 0 ? 'text-yellow-600 dark:text-yellow-400' : ''}`}>
+                            {reseller.nome}
                           </span>
-                          <span className="font-medium text-sm sm:text-base">{reseller.nome}</span>
                         </div>
-                        <span className="text-sm font-semibold text-primary">
-                          {reseller.total_received.toLocaleString('pt-BR')} créditos
-                        </span>
+                        <Badge variant={index === 0 ? "default" : "secondary"} className={`${index === 0 ? 'bg-gradient-to-r from-yellow-500 to-amber-500 text-yellow-950 border-0' : ''}`}>
+                          <CreditCard className="h-3 w-3 mr-1" />
+                          {reseller.total_received.toLocaleString('pt-BR')}
+                        </Badge>
                       </div>
                     ))}
                   </div>
