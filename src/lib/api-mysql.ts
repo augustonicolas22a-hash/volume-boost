@@ -192,6 +192,10 @@ export const mysqlApi = {
     getDocumentStats: async (masterId: number) => {
       return fetchAPI(`/admins/stats/documents/${masterId}`);
     },
+
+    getResellerDetails: async (resellerId: number) => {
+      return fetchAPI(`/admins/reseller-details/${resellerId}`);
+    },
   },
 
   credits: {

@@ -10,6 +10,7 @@ import Recarregar from "./pages/Recarregar";
 import CriarMaster from "./pages/CriarMaster";
 import CriarRevendedor from "./pages/CriarRevendedor";
 import Revendedores from "./pages/Revendedores";
+import RevendedorDetalhes from "./pages/RevendedorDetalhes";
 import Transferir from "./pages/Transferir";
 import Estatisticas from "./pages/Estatisticas";
 import HistoricoTransferencias from "./pages/HistoricoTransferencias";
@@ -32,6 +33,7 @@ const App = () => (
               <Route path="/criar-master" element={<CriarMaster />} />
               <Route path="/criar-revendedor" element={<CriarRevendedor />} />
               <Route path="/revendedores" element={<Revendedores />} />
+              <Route path="/revendedor/:id" element={<RevendedorDetalhes />} />
               <Route path="/transferir" element={<Transferir />} />
               <Route path="/historico-transferencias" element={<HistoricoTransferencias />} />
               <Route path="/estatisticas" element={<Estatisticas />} />

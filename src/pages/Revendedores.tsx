@@ -4,9 +4,10 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Navigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { Navigate, useNavigate } from 'react-router-dom';
 import api from '@/lib/api';
-import { Users, CreditCard } from 'lucide-react';
+import { Users, CreditCard, Eye } from 'lucide-react';
 
 interface Reseller {
   id: number;
@@ -18,6 +19,7 @@ interface Reseller {
 
 export default function Revendedores() {
   const { admin, role, loading } = useAuth();
+  const navigate = useNavigate();
   const [resellers, setResellers] = useState<Reseller[]>([]);
   const [loadingData, setLoadingData] = useState(true);
 
@@ -88,7 +90,7 @@ export default function Revendedores() {
               </div>
             ) : (
               <div className="overflow-x-auto -mx-4 sm:mx-0">
-                <div className="min-w-[500px] sm:min-w-0 px-4 sm:px-0">
+                <div className="min-w-[600px] sm:min-w-0 px-4 sm:px-0">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -96,6 +98,7 @@ export default function Revendedores() {
                         <TableHead>Email</TableHead>
                         <TableHead>Saldo</TableHead>
                         <TableHead className="hidden sm:table-cell">Data de Criação</TableHead>
+                        <TableHead className="text-right">Ações</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -113,6 +116,17 @@ export default function Revendedores() {
                           </TableCell>
                           <TableCell className="text-muted-foreground hidden sm:table-cell">
                             {new Date(reseller.created_at).toLocaleDateString('pt-BR')}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => navigate(`/revendedor/${reseller.id}`)}
+                              className="gap-1"
+                            >
+                              <Eye className="h-4 w-4" />
+                              <span className="hidden sm:inline">Ver Detalhes</span>
+                            </Button>
                           </TableCell>
                         </TableRow>
                       ))}
