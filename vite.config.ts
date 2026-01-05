@@ -10,6 +10,9 @@ export default defineConfig(({ mode }) => ({
     port: 8080,
     allowedHosts: ["painel.datasistemas.online"],
   },
+  build: {
+    sourcemap: false, // Desabilita source maps em produção
+  },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
   resolve: {
     alias: {
