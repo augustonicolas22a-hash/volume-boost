@@ -78,9 +78,9 @@ export default function CriarRevendedor() {
               <UserPlus className="h-5 w-5 text-primary" />
               Novo Revendedor
             </CardTitle>
-            <CardDescription>
-              O revendedor será vinculado à sua conta e poderá receber transferências de créditos
-            </CardDescription>
+          <CardDescription>
+            O revendedor receberá <strong>5 créditos iniciais</strong> (recarga mínima de R$90 será debitada do seu saldo)
+          </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -117,9 +117,13 @@ export default function CriarRevendedor() {
                   minLength={6}
                 />
               </div>
+              <div className="p-3 bg-muted rounded-lg text-sm text-muted-foreground">
+                <p>💰 <strong>Recarga obrigatória:</strong> R$90,00</p>
+                <p>📦 <strong>Créditos iniciais:</strong> 5 créditos</p>
+              </div>
               <Button type="submit" className="w-full" disabled={isCreating}>
                 {isCreating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Criar Revendedor
+                Criar Revendedor (R$90)
               </Button>
             </form>
           </CardContent>
