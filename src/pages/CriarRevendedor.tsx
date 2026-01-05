@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { UserPlus, Loader2, QrCode, Copy, Check, Clock, ArrowLeft } from 'lucide-react';
 import ReactCanvasConfetti from 'react-canvas-confetti';
 import type { CreateTypes } from 'canvas-confetti';
+import mysqlApi from '@/lib/api-mysql';
 
 type Step = 'form' | 'payment' | 'success';
 
@@ -83,8 +84,7 @@ export default function CriarRevendedor() {
 
     const checkPayment = async () => {
       try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/payments/reseller-status/${pixData.transactionId}`);
-        const data = await response.json();
+        const data = await mysqlApi.payments.getResellerStatus(pixData.transactionId);
 
         if (data.status === 'PAID') {
           fire();
@@ -142,25 +142,17 @@ export default function CriarRevendedor() {
     setIsCreating(true);
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/payments/create-reseller-pix`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          masterId: admin.id,
-          masterName: admin.nome,
-          resellerData: {
-            nome: formData.name,
-            email: formData.email.toLowerCase().trim(),
-            key: formData.password
-          }
-        })
+      const data = await mysqlApi.payments.createResellerPix({
+        masterId: admin.id,
+        masterName: admin.nome,
+        resellerData: {
+          nome: formData.name,
+          email: formData.email.toLowerCase().trim(),
+          key: formData.password,
+        },
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Erro ao gerar PIX');
-      }
+      // api-mysql já lança erro com mensagem amigável quando não for ok
 
       setPixData(data);
       setTimeLeft(600);

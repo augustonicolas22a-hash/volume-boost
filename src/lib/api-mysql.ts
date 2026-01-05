@@ -264,6 +264,21 @@ export const mysqlApi = {
       });
     },
 
+    createResellerPix: async (params: {
+      masterId: number;
+      masterName: string;
+      resellerData: { nome: string; email: string; key: string };
+    }) => {
+      return fetchAPI('/payments/create-reseller-pix', {
+        method: 'POST',
+        body: JSON.stringify(params),
+      });
+    },
+
+    getResellerStatus: async (transactionId: string) => {
+      return fetchAPI(`/payments/reseller-status/${transactionId}`);
+    },
+
     checkStatus: async (transactionId: string) => {
       return fetchAPI(`/payments/status/${transactionId}`);
     },
