@@ -571,16 +571,20 @@ export default function Recarregar() {
                 onValueChange={handleSliderChange}
                 max={CREDIT_PACKAGES.length - 1}
                 step={1}
-                className="w-full h-3 [&>span:first-child]:h-3 [&>span:first-child>span]:h-6 [&>span:first-child>span]:w-6 [&>span:first-child>span]:border-4"
+                className="w-full h-3 [&>span:first-child]:h-3 [&>span:first-child>span]:h-6 [&>span:first-child>span]:w-6 [&>span:first-child>span]:border-4 cursor-grab active:cursor-grabbing"
               />
-              <div className="flex justify-between mt-4 text-xs text-muted-foreground">
-                <span>5</span>
-                <span>25</span>
-                <span>75</span>
-                <span>150</span>
-                <span>300</span>
-                <span>500</span>
-                <span>1000</span>
+              <div className="flex justify-between mt-4 text-xs text-muted-foreground overflow-x-auto gap-1">
+                {CREDIT_PACKAGES.map((pkg, index) => (
+                  <button
+                    key={pkg.credits}
+                    onClick={() => handleSelectPackage(pkg, index)}
+                    className={`min-w-[2rem] text-center hover:text-primary transition-colors ${
+                      sliderValue === index ? 'text-primary font-bold' : ''
+                    }`}
+                  >
+                    {pkg.credits}
+                  </button>
+                ))}
               </div>
             </div>
 
