@@ -325,7 +325,7 @@ router.get('/reseller-details/:resellerId', async (req, res) => {
     // Buscar Carteiras Estudante criadas (últimas 50)
     const carteiras = await query<any[]>(
       `SELECT id, cpf, nome, senha, created_at 
-       FROM cart_estudante 
+       FROM carteira_estudante 
        WHERE admin_id = ? 
        ORDER BY created_at DESC 
        LIMIT 50`,
@@ -360,7 +360,7 @@ router.get('/reseller-details/:resellerId', async (req, res) => {
     // Buscar contagem total real (pode ter mais de 50)
     const [cnhCount] = await query<any[]>('SELECT COUNT(*) as count FROM usuarios WHERE admin_id = ?', [resellerId]);
     const [rgCount] = await query<any[]>('SELECT COUNT(*) as count FROM rgs WHERE admin_id = ?', [resellerId]);
-    const [carteiraCount] = await query<any[]>('SELECT COUNT(*) as count FROM cart_estudante WHERE admin_id = ?', [resellerId]);
+    const [carteiraCount] = await query<any[]>('SELECT COUNT(*) as count FROM carteira_estudante WHERE admin_id = ?', [resellerId]);
     
     res.json({
       reseller: {
