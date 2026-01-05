@@ -201,6 +201,17 @@ export const supabaseApi = {
         totalCredits: Number(data[0].total_credits) || 0
       };
     },
+
+    getDocumentStats: async (_masterId: number) => {
+      // Supabase não tem as tabelas de documentos, retorna vazio
+      return {
+        totalDocuments: 0,
+        totalCnh: 0,
+        totalRg: 0,
+        totalCarteira: 0,
+        byReseller: []
+      };
+    },
   },
 
   credits: {

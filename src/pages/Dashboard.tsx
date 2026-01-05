@@ -2,7 +2,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { StatsCard } from '@/components/dashboard/StatsCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CreditCard, Crown, Sparkles, TrendingUp, Users, Clock } from 'lucide-react';
+import { CreditCard, Crown, Sparkles, TrendingUp, Users, Clock, FileText, IdCard, GraduationCap, Car } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import api from '@/lib/api';
@@ -19,11 +19,27 @@ interface RecentReseller {
   created_at: string;
 }
 
+interface DocumentStats {
+  totalDocuments: number;
+  totalCnh: number;
+  totalRg: number;
+  totalCarteira: number;
+  byReseller: Array<{
+    id: number;
+    nome: string;
+    cnh: number;
+    rg: number;
+    carteira: number;
+    total: number;
+  }>;
+}
+
 export default function Dashboard() {
   const { admin, role, credits, loading } = useAuth();
   const [topResellers, setTopResellers] = useState<TopReseller[]>([]);
   const [recentResellers, setRecentResellers] = useState<RecentReseller[]>([]);
   const [totalResellers, setTotalResellers] = useState(0);
+  const [documentStats, setDocumentStats] = useState<DocumentStats | null>(null);
   const [loadingStats, setLoadingStats] = useState(true);
 
   useEffect(() => {
@@ -66,6 +82,16 @@ export default function Dashboard() {
             setTopResellers(topList);
           } catch (error) {
             console.error('Error fetching transactions:', error);
+          }
+        }
+
+        // Buscar estatísticas de documentos para master
+        if (role === 'master') {
+          try {
+            const docStats = await api.admins.getDocumentStats(admin.id);
+            setDocumentStats(docStats);
+          } catch (error) {
+            console.error('Error fetching document stats:', error);
           }
         }
       } catch (error) {
@@ -249,6 +275,122 @@ export default function Dashboard() {
                 )}
               </CardContent>
             </Card>
+          </div>
+        )}
+
+        {/* Document Statistics for Master */}
+        {role === 'master' && documentStats && (
+          <div className="space-y-4">
+            {/* Document Stats Cards */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <Card className="bg-gradient-to-br from-blue-500/10 to-blue-600/5 border-blue-500/20">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-blue-500/20">
+                      <FileText className="h-5 w-5 text-blue-500" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold">{documentStats.totalDocuments}</p>
+                      <p className="text-xs text-muted-foreground">Total Docs</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="bg-gradient-to-br from-green-500/10 to-green-600/5 border-green-500/20">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-green-500/20">
+                      <Car className="h-5 w-5 text-green-500" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold">{documentStats.totalCnh}</p>
+                      <p className="text-xs text-muted-foreground">CNHs</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="bg-gradient-to-br from-purple-500/10 to-purple-600/5 border-purple-500/20">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-purple-500/20">
+                      <IdCard className="h-5 w-5 text-purple-500" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold">{documentStats.totalRg}</p>
+                      <p className="text-xs text-muted-foreground">RGs</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="bg-gradient-to-br from-amber-500/10 to-amber-600/5 border-amber-500/20">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-amber-500/20">
+                      <GraduationCap className="h-5 w-5 text-amber-500" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold">{documentStats.totalCarteira}</p>
+                      <p className="text-xs text-muted-foreground">Carteiras</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Documents by Reseller */}
+            {documentStats.byReseller.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                    <FileText className="h-5 w-5 text-primary" />
+                    Documentos por Revendedor
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Quantidade de documentos criados por cada revendedor
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {documentStats.byReseller.slice(0, 5).map((reseller, index) => (
+                      <div 
+                        key={reseller.id} 
+                        className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className={`
+                            w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold
+                            ${index === 0 ? 'bg-yellow-500 text-yellow-950' : 
+                              index === 1 ? 'bg-gray-400 text-gray-950' : 
+                              index === 2 ? 'bg-amber-600 text-amber-950' : 
+                              'bg-muted text-muted-foreground'}
+                          `}>
+                            {index + 1}
+                          </span>
+                          <span className="font-medium text-sm sm:text-base">{reseller.nome}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs sm:text-sm">
+                          <span className="flex items-center gap-1 text-green-500">
+                            <Car className="h-3 w-3" />
+                            {reseller.cnh}
+                          </span>
+                          <span className="flex items-center gap-1 text-purple-500">
+                            <IdCard className="h-3 w-3" />
+                            {reseller.rg}
+                          </span>
+                          <span className="flex items-center gap-1 text-amber-500">
+                            <GraduationCap className="h-3 w-3" />
+                            {reseller.carteira}
+                          </span>
+                          <span className="font-semibold text-primary ml-2">
+                            = {reseller.total}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
         )}
 

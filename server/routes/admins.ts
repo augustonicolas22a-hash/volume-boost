@@ -186,7 +186,7 @@ router.delete('/:id', async (req, res) => {
 });
 
 // Dashboard stats
-router.get('/stats/dashboard', async (req, res) => {
+router.get('/stats/dashboard', async (_req, res) => {
   try {
     const [masters] = await query<any[]>('SELECT COUNT(*) as count FROM admins WHERE `rank` = ?', ['master']);
     const [resellers] = await query<any[]>('SELECT COUNT(*) as count FROM admins WHERE `rank` = ?', ['revendedor']);
@@ -199,6 +199,90 @@ router.get('/stats/dashboard', async (req, res) => {
     });
   } catch (error) {
     console.error('Erro ao buscar stats:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// Estatísticas de documentos criados pelos revendedores de um master
+router.get('/stats/documents/:masterId', async (req, res) => {
+  try {
+    const masterId = parseInt(req.params.masterId);
+    
+    // Buscar IDs dos revendedores deste master
+    const resellers = await query<any[]>(
+      'SELECT id, nome FROM admins WHERE criado_por = ?',
+      [masterId]
+    );
+    
+    if (resellers.length === 0) {
+      return res.json({
+        totalDocuments: 0,
+        totalCnh: 0,
+        totalRg: 0,
+        totalCarteira: 0,
+        byReseller: []
+      });
+    }
+    
+    const resellerIds = resellers.map(r => r.id);
+    const placeholders = resellerIds.map(() => '?').join(',');
+    
+    // Contar CNHs (tabela usuarios)
+    const cnhCounts = await query<any[]>(
+      `SELECT admin_id, COUNT(*) as count FROM usuarios WHERE admin_id IN (${placeholders}) GROUP BY admin_id`,
+      resellerIds
+    );
+    
+    // Contar RGs
+    const rgCounts = await query<any[]>(
+      `SELECT admin_id, COUNT(*) as count FROM rgs WHERE admin_id IN (${placeholders}) GROUP BY admin_id`,
+      resellerIds
+    );
+    
+    // Contar Carteiras Estudante
+    const carteiraCounts = await query<any[]>(
+      `SELECT admin_id, COUNT(*) as count FROM carteira_estudante WHERE admin_id IN (${placeholders}) GROUP BY admin_id`,
+      resellerIds
+    );
+    
+    // Mapear contagens por revendedor
+    const cnhMap = new Map(cnhCounts.map(c => [c.admin_id, c.count]));
+    const rgMap = new Map(rgCounts.map(c => [c.admin_id, c.count]));
+    const carteiraMap = new Map(carteiraCounts.map(c => [c.admin_id, c.count]));
+    
+    let totalCnh = 0;
+    let totalRg = 0;
+    let totalCarteira = 0;
+    
+    const byReseller = resellers.map(reseller => {
+      const cnh = cnhMap.get(reseller.id) || 0;
+      const rg = rgMap.get(reseller.id) || 0;
+      const carteira = carteiraMap.get(reseller.id) || 0;
+      
+      totalCnh += cnh;
+      totalRg += rg;
+      totalCarteira += carteira;
+      
+      return {
+        id: reseller.id,
+        nome: reseller.nome,
+        cnh,
+        rg,
+        carteira,
+        total: cnh + rg + carteira
+      };
+    }).filter(r => r.total > 0)
+      .sort((a, b) => b.total - a.total);
+    
+    res.json({
+      totalDocuments: totalCnh + totalRg + totalCarteira,
+      totalCnh,
+      totalRg,
+      totalCarteira,
+      byReseller
+    });
+  } catch (error) {
+    console.error('Erro ao buscar estatísticas de documentos:', error);
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });
