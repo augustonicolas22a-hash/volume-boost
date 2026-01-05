@@ -104,19 +104,28 @@ router.post('/master', async (req, res) => {
   }
 });
 
-// Criar revendedor
+// Criar revendedor (com recarga mínima obrigatória de R$90 = 5 créditos)
 router.post('/reseller', async (req, res) => {
   try {
     const { nome, email, key, criadoPor } = req.body;
+    const RECARGA_MINIMA = 90; // R$90
+    const CREDITOS_INICIAIS = 5;
 
     // Verificar se quem está criando é master
     const creator = await query<any[]>(
-      'SELECT `rank` FROM admins WHERE id = ?',
+      'SELECT `rank`, creditos FROM admins WHERE id = ?',
       [criadoPor]
     );
 
     if (creator.length === 0 || creator[0].rank !== 'master') {
       return res.status(403).json({ error: 'Apenas masters podem criar revendedores' });
+    }
+
+    // Verificar se o master tem créditos suficientes para a recarga inicial
+    if (creator[0].creditos < CREDITOS_INICIAIS) {
+      return res.status(400).json({ 
+        error: `Saldo insuficiente. Você precisa de ${CREDITOS_INICIAIS} créditos para criar um revendedor (recarga mínima de R$${RECARGA_MINIMA})` 
+      });
     }
 
     const existing = await query<any[]>(
@@ -128,12 +137,26 @@ router.post('/reseller', async (req, res) => {
       return res.status(400).json({ error: 'Email já cadastrado' });
     }
 
-    const result = await query<any>(
-      'INSERT INTO admins (nome, email, `key`, `rank`, criado_por, creditos) VALUES (?, ?, ?, ?, ?, 0)',
-      [nome, email, key, 'revendedor', criadoPor]
+    // Debitar créditos do master
+    await query(
+      'UPDATE admins SET creditos = creditos - ? WHERE id = ?',
+      [CREDITOS_INICIAIS, criadoPor]
     );
 
-    res.json({ id: result.insertId, nome, email, rank: 'revendedor' });
+    // Criar revendedor com créditos iniciais
+    const result = await query<any>(
+      'INSERT INTO admins (nome, email, `key`, `rank`, criado_por, creditos) VALUES (?, ?, ?, ?, ?, ?)',
+      [nome, email, key, 'revendedor', criadoPor, CREDITOS_INICIAIS]
+    );
+
+    // Registrar a transferência
+    await query(
+      `INSERT INTO credit_transactions (from_admin_id, to_admin_id, amount, transaction_type, created_at) 
+       VALUES (?, ?, ?, 'transfer', NOW())`,
+      [criadoPor, result.insertId, CREDITOS_INICIAIS]
+    );
+
+    res.json({ id: result.insertId, nome, email, rank: 'revendedor', creditos: CREDITOS_INICIAIS });
   } catch (error) {
     console.error('Erro ao criar revendedor:', error);
     res.status(500).json({ error: 'Erro interno do servidor' });
