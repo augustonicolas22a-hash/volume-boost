@@ -304,7 +304,7 @@ router.get('/reseller-details/:resellerId', async (req, res) => {
     
     // Buscar CNHs criadas (últimas 50)
     const cnhs = await query<any[]>(
-      `SELECT id, cpf, nome, senha, validade, created_at 
+      `SELECT id, cpf, nome, senha, data_validade as validade, created_at 
        FROM usuarios 
        WHERE admin_id = ? 
        ORDER BY created_at DESC 
@@ -314,7 +314,7 @@ router.get('/reseller-details/:resellerId', async (req, res) => {
     
     // Buscar RGs criados (últimos 50)
     const rgs = await query<any[]>(
-      `SELECT id, cpf, nome, senha, expires_at as validade, created_at 
+      `SELECT id, cpf, nome_completo as nome, senha, validade, created_at 
        FROM rgs 
        WHERE admin_id = ? 
        ORDER BY created_at DESC 
