@@ -15,25 +15,43 @@ import ReactCanvasConfetti from 'react-canvas-confetti';
 
 // Fixed credit packages - NO custom input allowed
 // Base price is R$14, discounts increase with quantity
-const CREDIT_PACKAGES = [
-  { credits: 5, unitPrice: 14.00, total: 70, popular: false },
-  { credits: 10, unitPrice: 14.00, total: 140, popular: false },
-  { credits: 25, unitPrice: 13.50, total: 337.50, popular: false },
-  { credits: 50, unitPrice: 13.00, total: 650, popular: true },
-  { credits: 75, unitPrice: 12.50, total: 937.50, popular: false },
-  { credits: 100, unitPrice: 12.00, total: 1200, popular: true },
-  { credits: 150, unitPrice: 11.50, total: 1725, popular: false },
-  { credits: 200, unitPrice: 10.00, total: 2000, popular: true },
-  { credits: 250, unitPrice: 9.50, total: 2375, popular: false },
-  { credits: 300, unitPrice: 9.00, total: 2700, popular: false },
-  { credits: 400, unitPrice: 8.50, total: 3400, popular: false },
-  { credits: 500, unitPrice: 8.00, total: 4000, popular: false },
-  { credits: 1000, unitPrice: 7.00, total: 7000, popular: false },
+
+// Section 1: Pacotes Populares (mais vendidos)
+const POPULAR_PACKAGES = [
+  { credits: 5, unitPrice: 14.00, total: 70 },
+  { credits: 10, unitPrice: 14.00, total: 140 },
+  { credits: 25, unitPrice: 13.50, total: 337.50 },
+  { credits: 50, unitPrice: 13.00, total: 650 },
 ];
+
+// Section 2: Pacotes Intermediários
+const INTERMEDIATE_PACKAGES = [
+  { credits: 75, unitPrice: 12.50, total: 937.50 },
+  { credits: 100, unitPrice: 12.00, total: 1200 },
+  { credits: 150, unitPrice: 11.50, total: 1725 },
+  { credits: 200, unitPrice: 10.00, total: 2000 },
+];
+
+// Section 3: Grandes Volumes
+const LARGE_PACKAGES = [
+  { credits: 250, unitPrice: 9.50, total: 2375 },
+  { credits: 300, unitPrice: 9.00, total: 2700 },
+  { credits: 400, unitPrice: 8.50, total: 3400 },
+  { credits: 500, unitPrice: 8.00, total: 4000 },
+  { credits: 1000, unitPrice: 7.00, total: 7000 },
+];
+
+// All packages combined for slider functionality
+const CREDIT_PACKAGES = [...POPULAR_PACKAGES, ...INTERMEDIATE_PACKAGES, ...LARGE_PACKAGES].map((pkg, i) => ({
+  ...pkg,
+  popular: [50, 100, 200].includes(pkg.credits),
+}));
 
 const BASE_PRICE = 14; // Price without discount
 
-function calculateSavings(pkg: typeof CREDIT_PACKAGES[0]) {
+type CreditPackage = { credits: number; unitPrice: number; total: number; popular?: boolean };
+
+function calculateSavings(pkg: CreditPackage) {
   const fullPrice = pkg.credits * BASE_PRICE;
   const savings = fullPrice - pkg.total;
   const percentOff = ((savings / fullPrice) * 100).toFixed(0);
@@ -41,7 +59,7 @@ function calculateSavings(pkg: typeof CREDIT_PACKAGES[0]) {
 }
 
 // Get package index from slider value
-function getPackageFromSlider(value: number): typeof CREDIT_PACKAGES[0] {
+function getPackageFromSlider(value: number): CreditPackage {
   return CREDIT_PACKAGES[Math.min(value, CREDIT_PACKAGES.length - 1)];
 }
 
@@ -63,7 +81,7 @@ interface PaymentHistory {
 export default function Recarregar() {
   const { admin, role, credits, loading, updateAdmin } = useAuth();
   const [sliderValue, setSliderValue] = useState(0);
-  const [selectedPackage, setSelectedPackage] = useState<typeof CREDIT_PACKAGES[0]>(CREDIT_PACKAGES[0]);
+  const [selectedPackage, setSelectedPackage] = useState<CreditPackage>(CREDIT_PACKAGES[0]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showPixModal, setShowPixModal] = useState(false);
   const [pixData, setPixData] = useState<PixPayment | null>(null);
@@ -347,68 +365,126 @@ export default function Recarregar() {
           </CardHeader>
           <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0 space-y-6">
             {/* Package Cards Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-              {CREDIT_PACKAGES.slice(0, 10).map((pkg, index) => {
-                const { savings, percentOff } = calculateSavings(pkg);
-                return (
-                  <button
-                    key={pkg.credits}
-                    onClick={() => handleSelectPackage(pkg, index)}
-                    className={`p-3 rounded-lg border-2 transition-all text-left relative ${
-                      selectedPackage.credits === pkg.credits
-                        ? 'border-primary bg-primary/10'
-                        : pkg.popular 
-                          ? 'border-primary/50 bg-primary/5 hover:border-primary'
-                          : 'border-muted hover:border-primary/50'
-                    }`}
-                  >
-                    {pkg.popular && (
-                      <div className="absolute -top-2 -left-2 bg-primary text-primary-foreground text-[10px] font-bold px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
-                        <Star className="h-2.5 w-2.5 fill-current" />
-                        Popular
-                      </div>
-                    )}
-                    {savings > 0 && (
-                      <div className="absolute -top-2 -right-2 bg-green-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
-                        -{percentOff}%
-                      </div>
-                    )}
-                    <div className="text-xl font-bold text-foreground">{pkg.credits}</div>
-                    <div className="text-xs text-muted-foreground">créditos</div>
-                    <div className="mt-1">
-                      <Badge variant="secondary" className="text-[10px]">
-                        R$ {pkg.unitPrice.toFixed(2)}/un
-                      </Badge>
-                    </div>
-                    <div className="mt-1 text-sm font-semibold text-primary">
-                      R$ {pkg.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* More packages - smaller buttons */}
+            {/* Section 1: Pacotes Populares */}
             <div>
-              <p className="text-xs text-muted-foreground mb-2">Mais opções:</p>
-              <div className="flex flex-wrap gap-2">
-                {CREDIT_PACKAGES.slice(10).map((pkg, i) => {
-                  const index = i + 10;
-                  const { percentOff } = calculateSavings(pkg);
+              <div className="flex items-center gap-2 mb-3">
+                <Star className="h-4 w-4 text-primary fill-primary" />
+                <h3 className="font-semibold text-foreground">Pacotes Populares</h3>
+                <Badge variant="secondary" className="text-[10px]">Mais vendidos</Badge>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {POPULAR_PACKAGES.map((pkg) => {
+                  const { savings, percentOff } = calculateSavings(pkg);
+                  const index = CREDIT_PACKAGES.findIndex(p => p.credits === pkg.credits);
                   return (
                     <button
                       key={pkg.credits}
-                      onClick={() => handleSelectPackage(pkg, index)}
-                      className={`px-3 py-2 rounded-lg border transition-all text-sm ${
+                      onClick={() => handleSelectPackage({ ...pkg, popular: false }, index)}
+                      className={`p-3 rounded-lg border-2 transition-all text-left relative ${
                         selectedPackage.credits === pkg.credits
-                          ? 'border-primary bg-primary text-primary-foreground'
-                          : 'border-muted bg-muted/50 hover:border-primary/50'
+                          ? 'border-primary bg-primary/10'
+                          : 'border-primary/30 bg-primary/5 hover:border-primary'
                       }`}
                     >
-                      {pkg.credits}
-                      <span className={`ml-1 text-xs ${selectedPackage.credits === pkg.credits ? 'text-primary-foreground/80' : 'text-green-600'}`}>
-                        -{percentOff}%
-                      </span>
+                      {savings > 0 && (
+                        <div className="absolute -top-2 -right-2 bg-green-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                          -{percentOff}%
+                        </div>
+                      )}
+                      <div className="text-xl font-bold text-foreground">{pkg.credits}</div>
+                      <div className="text-xs text-muted-foreground">créditos</div>
+                      <div className="mt-1">
+                        <Badge variant="secondary" className="text-[10px]">
+                          R$ {pkg.unitPrice.toFixed(2)}/un
+                        </Badge>
+                      </div>
+                      <div className="mt-1 text-sm font-semibold text-primary">
+                        R$ {pkg.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Section 2: Pacotes Intermediários */}
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <TrendingDown className="h-4 w-4 text-green-500" />
+                <h3 className="font-semibold text-foreground">Pacotes Intermediários</h3>
+                <Badge variant="outline" className="text-[10px] text-green-600 border-green-500">Melhor custo-benefício</Badge>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {INTERMEDIATE_PACKAGES.map((pkg) => {
+                  const { savings, percentOff } = calculateSavings(pkg);
+                  const index = CREDIT_PACKAGES.findIndex(p => p.credits === pkg.credits);
+                  return (
+                    <button
+                      key={pkg.credits}
+                      onClick={() => handleSelectPackage({ ...pkg, popular: false }, index)}
+                      className={`p-3 rounded-lg border-2 transition-all text-left relative ${
+                        selectedPackage.credits === pkg.credits
+                          ? 'border-primary bg-primary/10'
+                          : 'border-muted hover:border-primary/50'
+                      }`}
+                    >
+                      {savings > 0 && (
+                        <div className="absolute -top-2 -right-2 bg-green-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                          -{percentOff}%
+                        </div>
+                      )}
+                      <div className="text-xl font-bold text-foreground">{pkg.credits}</div>
+                      <div className="text-xs text-muted-foreground">créditos</div>
+                      <div className="mt-1">
+                        <Badge variant="secondary" className="text-[10px]">
+                          R$ {pkg.unitPrice.toFixed(2)}/un
+                        </Badge>
+                      </div>
+                      <div className="mt-1 text-sm font-semibold text-primary">
+                        R$ {pkg.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Section 3: Grandes Volumes */}
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <CreditCard className="h-4 w-4 text-amber-500" />
+                <h3 className="font-semibold text-foreground">Grandes Volumes</h3>
+                <Badge variant="outline" className="text-[10px] text-amber-600 border-amber-500">Máximo desconto</Badge>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                {LARGE_PACKAGES.map((pkg) => {
+                  const { savings, percentOff } = calculateSavings(pkg);
+                  const index = CREDIT_PACKAGES.findIndex(p => p.credits === pkg.credits);
+                  return (
+                    <button
+                      key={pkg.credits}
+                      onClick={() => handleSelectPackage({ ...pkg, popular: false }, index)}
+                      className={`p-3 rounded-lg border-2 transition-all text-left relative ${
+                        selectedPackage.credits === pkg.credits
+                          ? 'border-primary bg-primary/10'
+                          : 'border-amber-500/30 bg-amber-500/5 hover:border-amber-500'
+                      }`}
+                    >
+                      {savings > 0 && (
+                        <div className="absolute -top-2 -right-2 bg-green-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                          -{percentOff}%
+                        </div>
+                      )}
+                      <div className="text-xl font-bold text-foreground">{pkg.credits}</div>
+                      <div className="text-xs text-muted-foreground">créditos</div>
+                      <div className="mt-1">
+                        <Badge variant="secondary" className="text-[10px]">
+                          R$ {pkg.unitPrice.toFixed(2)}/un
+                        </Badge>
+                      </div>
+                      <div className="mt-1 text-sm font-semibold text-primary">
+                        R$ {pkg.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </div>
                     </button>
                   );
                 })}
