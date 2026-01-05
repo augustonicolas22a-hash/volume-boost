@@ -566,20 +566,23 @@ export default function Recarregar() {
             {/* Slider Section */}
             <div className="bg-muted/30 rounded-xl p-6">
               <p className="text-sm text-muted-foreground mb-4">Ou arraste para selecionar:</p>
-              <Slider
-                value={[sliderValue]}
-                onValueChange={handleSliderChange}
-                max={CREDIT_PACKAGES.length - 1}
-                step={1}
-                className="w-full h-3 [&>span:first-child]:h-3 [&>span:first-child>span]:h-6 [&>span:first-child>span]:w-6 [&>span:first-child>span]:border-4 cursor-grab active:cursor-grabbing"
-              />
-              <div className="flex justify-between mt-4 text-xs text-muted-foreground overflow-x-auto gap-1">
+              <div className="px-3">
+                <Slider
+                  value={[sliderValue]}
+                  onValueChange={handleSliderChange}
+                  min={0}
+                  max={CREDIT_PACKAGES.length - 1}
+                  step={1}
+                  className="w-full"
+                />
+              </div>
+              <div className="flex justify-between mt-4 text-xs text-muted-foreground">
                 {CREDIT_PACKAGES.map((pkg, index) => (
                   <button
                     key={pkg.credits}
                     onClick={() => handleSelectPackage(pkg, index)}
                     className={`min-w-[2rem] text-center hover:text-primary transition-colors ${
-                      sliderValue === index ? 'text-primary font-bold' : ''
+                      sliderValue === index ? 'text-primary font-bold scale-110' : ''
                     }`}
                   >
                     {pkg.credits}
