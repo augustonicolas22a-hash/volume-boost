@@ -161,18 +161,21 @@ export default function Transferir() {
                   <Input
                     id="amount"
                     type="number"
-                    min={1}
+                    min={3}
                     max={credits}
                     value={amount || ''}
                     onChange={(e) => setAmount(Math.max(0, parseInt(e.target.value) || 0))}
                     placeholder="0"
                   />
+                  <p className="text-xs text-muted-foreground">
+                    * Quantidade mínima: 3 créditos
+                  </p>
                 </div>
 
                 <Button 
                   className="w-full" 
                   onClick={handleTransfer}
-                  disabled={isTransferring || !selectedReseller || amount <= 0 || amount > credits}
+                  disabled={isTransferring || !selectedReseller || amount < 3 || amount > credits}
                 >
                   {isTransferring && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Transferir Créditos
