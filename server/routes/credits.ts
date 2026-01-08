@@ -50,9 +50,18 @@ router.post('/transfer', async (req, res) => {
     await connection.commit();
 
     res.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     await connection.rollback();
     console.error('Erro na transferência:', error);
+
+    // Erro comum quando a tabela credit_transactions foi criada sem AUTO_INCREMENT no id
+    if (error?.code === 'ER_DUP_ENTRY' && String(error?.sqlMessage || '').includes("for key 'PRIMARY'")) {
+      return res.status(500).json({
+        error:
+          "Banco MySQL: a tabela credit_transactions está com o campo id sem AUTO_INCREMENT. Rode o script docs/mysql-update.sql (ou aplique: ALTER TABLE credit_transactions MODIFY id INT NOT NULL AUTO_INCREMENT).",
+      });
+    }
+
     res.status(500).json({ error: 'Erro interno do servidor' });
   } finally {
     connection.release();
