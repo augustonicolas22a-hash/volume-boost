@@ -244,7 +244,13 @@ export const supabaseApi = {
         p_amount: amount
       });
 
-      if (error) throw new Error(error.message);
+      if (error) {
+        // Extrair mensagem de erro do PostgreSQL (formato: "ERROR: mensagem")
+        const errorMessage = error.message || 'Erro ao transferir créditos';
+        // Remover prefixo "ERROR: " se existir
+        const cleanMessage = errorMessage.replace(/^ERROR:\s*/i, '');
+        throw new Error(cleanMessage);
+      }
       return { success: data === true };
     },
 
