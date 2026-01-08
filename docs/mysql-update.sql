@@ -30,6 +30,9 @@ CREATE TABLE IF NOT EXISTS `credit_transactions` (
   KEY `idx_created_at` (`created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Se a tabela já existe e o ID não estiver AUTO_INCREMENT, corrija:
+ALTER TABLE `credit_transactions`
+  MODIFY COLUMN `id` INT(11) NOT NULL AUTO_INCREMENT;
 -- =====================================================
 -- Tabela: monthly_goals (metas mensais)
 -- =====================================================
