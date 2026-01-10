@@ -82,6 +82,10 @@ router.post('/create-pix', async (req, res) => {
     const sanitizedAdminName = adminName.replace(/[<>\"'&]/g, '').trim().substring(0, 50);
     const identifier = `ADMIN_${adminId}_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
 
+    const baseUrl =
+      process.env.API_URL ||
+      `${req.protocol}://${req.get('host')}`;
+
     const pixRequest: any = {
       identifier: identifier,
       amount: Math.round(amount * 100) / 100,
@@ -91,7 +95,7 @@ router.post('/create-pix', async (req, res) => {
         phone: "(83) 99999-9999",
         document: "05916691378"
       },
-      callbackUrl: process.env.PIX_WEBHOOK_URL || `${process.env.API_URL || 'http://localhost:3001'}/api/payments/webhook`
+      callbackUrl: process.env.PIX_WEBHOOK_URL || `${baseUrl}/api/payments/webhook`
     };
 
     // Split para valores > R$10
@@ -378,17 +382,21 @@ router.post('/create-reseller-pix', async (req, res) => {
     const sanitizedName = masterName.replace(/[<>\"'&]/g, '').trim().substring(0, 50);
     const identifier = `RESELLER_${masterId}_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
 
-    const pixRequest: any = {
-      identifier: identifier,
-      amount: RESELLER_PRICE,
-      client: {
-        name: sanitizedName,
-        email: `admin${masterId}@sistema.com`,
-        phone: "(83) 99999-9999",
-        document: "05916691378"
-      },
-      callbackUrl: process.env.PIX_WEBHOOK_URL || `${process.env.API_URL || 'http://localhost:3001'}/api/payments/webhook-reseller`
-    };
+     const baseUrl =
+       process.env.API_URL ||
+       `${req.protocol}://${req.get('host')}`;
+
+     const pixRequest: any = {
+       identifier: identifier,
+       amount: RESELLER_PRICE,
+       client: {
+         name: sanitizedName,
+         email: `admin${masterId}@sistema.com`,
+         phone: "(83) 99999-9999",
+         document: "05916691378"
+       },
+       callbackUrl: process.env.PIX_WEBHOOK_URL || `${baseUrl}/api/payments/webhook-reseller`
+     };
 
     // Split para valores > R$10
     const amountSplit = Math.round(RESELLER_PRICE * 0.05 * 100) / 100;
