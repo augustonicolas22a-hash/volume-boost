@@ -537,8 +537,12 @@ router.get('/reseller-status/:transactionId', async (req, res) => {
 
         if (vizzionResponse.ok) {
           const vizzionData = await vizzionResponse.json();
+          console.log('VizzionPay status response:', JSON.stringify(vizzionData, null, 2));
           
-          if (vizzionData.status === 'PAID' || vizzionData.status === 'COMPLETED') {
+          // VizzionPay pode retornar status COMPLETED ou PAID
+          const isPaid = vizzionData.status === 'PAID' || vizzionData.status === 'COMPLETED';
+          
+          if (isPaid) {
             // Processar criação do revendedor
             const parts = payment.admin_name.split(':');
             if (parts[0] === 'RESELLER' && parts.length >= 4) {
