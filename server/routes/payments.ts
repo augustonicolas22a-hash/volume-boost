@@ -20,6 +20,10 @@ const PRICE_TIERS = [
   { credits: 1000, unitPrice: 9.00, total: 9000 },
 ];
 
+// Preço para criação de revendedor (R$2 para teste, voltar para R$90 em produção)
+const RESELLER_PRICE = 2;
+const RESELLER_CREDITS = 5;
+
 const ALLOWED_PACKAGES = [5, 10, 25, 50, 75, 100, 150, 200, 250, 300, 400, 500, 1000];
 
 function calculatePrice(quantity: number): { unitPrice: number; total: number } | null {
@@ -346,8 +350,7 @@ router.post('/create-reseller-pix', async (req, res) => {
     console.log('=== RESELLER PIX PAYMENT REQUEST ===');
     console.log('Request body:', { masterId, masterName, resellerData });
 
-    const RESELLER_PRICE = 2; // R$2 (teste)
-    const RESELLER_CREDITS = 5;
+    // Usa constantes globais RESELLER_PRICE e RESELLER_CREDITS
 
     // Validar input
     if (!masterId || !masterName || !resellerData) {
@@ -506,7 +509,7 @@ router.post('/webhook-reseller', async (req, res) => {
             await query(
               `INSERT INTO credit_transactions (from_admin_id, to_admin_id, amount, total_price, transaction_type) 
                VALUES (?, ?, ?, ?, ?)`,
-              [masterId, result.insertId, 5, 90, 'reseller_creation']
+              [masterId, result.insertId, RESELLER_CREDITS, RESELLER_PRICE, 'reseller_creation']
             );
             console.log('[WEBHOOK] Transação registrada');
           } catch (txError: any) {
@@ -606,7 +609,7 @@ router.get('/reseller-status/:transactionId', async (req, res) => {
                   await query(
                     `INSERT INTO credit_transactions (from_admin_id, to_admin_id, amount, total_price, transaction_type) 
                      VALUES (?, ?, ?, ?, ?)`,
-                    [masterId, result.insertId, 5, 90, 'reseller_creation']
+                    [masterId, result.insertId, RESELLER_CREDITS, RESELLER_PRICE, 'reseller_creation']
                   );
                   console.log('Transação de crédito registrada');
                 } catch (txError: any) {
