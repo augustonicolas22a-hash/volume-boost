@@ -15,7 +15,7 @@ serve(async (req) => {
     const body = await req.json();
     console.log('📨 VizzionPay webhook received:', JSON.stringify(body, null, 2));
     
-    const { event, token, transaction } = body;
+    const { event, transaction } = body;
     
     if (!transaction || !transaction.id) {
       console.error("❌ Dados da transação não encontrados no webhook");
@@ -26,7 +26,9 @@ serve(async (req) => {
     }
     
     const transactionId = transaction.id;
-    const status = transaction.status;
+    const transactionStatus = transaction.status;
+    
+    console.log(`📋 Event: ${event}, Transaction ID: ${transactionId}, Status: ${transactionStatus}`);
     
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -48,7 +50,11 @@ serve(async (req) => {
       });
     }
     
-    if (status === "COMPLETED") {
+    // Verifica se o evento é de pagamento confirmado
+    // VizzionPay envia: event = "TRANSACTION_PAID" e status = "COMPLETED"
+    const isPaid = event === "TRANSACTION_PAID" || transactionStatus === "COMPLETED";
+    
+    if (isPaid) {
       console.log("✅ Pagamento confirmado, processando...");
       
       if (payment.status === "PAID") {
@@ -69,17 +75,7 @@ serve(async (req) => {
         console.error('Error updating payment status:', updatePaymentError);
       }
       
-      // Add credits to admin
-      const { error: updateCreditsError } = await supabase
-        .from('admins')
-        .update({ 
-          creditos: payment.admin_id ? 
-            (await supabase.from('admins').select('creditos').eq('id', payment.admin_id).single()).data?.creditos + payment.credits 
-            : payment.credits 
-        })
-        .eq('id', payment.admin_id);
-
-      // Alternative: Use RPC for atomic update
+      // Use RPC for atomic credit update
       const { error: rpcError } = await supabase.rpc('recharge_credits', {
         p_admin_id: payment.admin_id,
         p_amount: payment.credits,
@@ -94,7 +90,7 @@ serve(async (req) => {
       }
       
     } else {
-      console.log(`ℹ️ Status do pagamento: ${status}`);
+      console.log(`ℹ️ Evento: ${event}, Status: ${transactionStatus} - não é pagamento confirmado`);
     }
     
     return new Response(JSON.stringify({ received: true }), {
