@@ -430,10 +430,11 @@ router.post('/create-reseller-pix', async (req, res) => {
     }
 
     // Salvar pagamento pendente com dados do revendedor
+    // Usa status PENDING (compatível com MySQL ENUM/VARCHAR) e identifica pelo prefixo RESELLER: no admin_name
     await query(
       `INSERT INTO pix_payments (admin_id, admin_name, credits, amount, transaction_id, status) 
        VALUES (?, ?, ?, ?, ?, ?)`,
-      [masterId, `RESELLER:${nome}:${email}:${key}`, RESELLER_CREDITS, RESELLER_PRICE, pixData.transactionId, 'PENDING_RESELLER']
+      [masterId, `RESELLER:${nome}:${email}:${key}`, RESELLER_CREDITS, RESELLER_PRICE, pixData.transactionId, 'PENDING']
     );
 
     console.log('PIX para revendedor salvo:', pixData.transactionId);
@@ -446,7 +447,7 @@ router.post('/create-reseller-pix', async (req, res) => {
       amount: RESELLER_PRICE,
       credits: RESELLER_CREDITS,
       dueDate: pixData.dueDate || new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-      status: "PENDING_RESELLER"
+      status: "PENDING"
     });
   } catch (error: any) {
     console.error('Erro ao criar PIX para revendedor:', error);
@@ -473,9 +474,10 @@ router.post('/webhook-reseller', async (req, res) => {
     const isPaid = event === 'TRANSACTION_PAID' || status === 'PAID' || status === 'COMPLETED';
 
     if (isPaid) {
+      // Busca por transactionId E admin_name começando com RESELLER: E status PENDING
       const payments = await query<any[]>(
-        'SELECT * FROM pix_payments WHERE transaction_id = ? AND status = ?',
-        [transactionId, 'PENDING_RESELLER']
+        `SELECT * FROM pix_payments WHERE transaction_id = ? AND admin_name LIKE 'RESELLER:%' AND status = 'PENDING'`,
+        [transactionId]
       );
 
       if (payments.length > 0) {
