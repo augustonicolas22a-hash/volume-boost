@@ -200,10 +200,23 @@ router.post('/webhook', async (req, res) => {
     console.log('=== PIX WEBHOOK RECEIVED ===');
     console.log('Webhook body:', JSON.stringify(req.body, null, 2));
 
-    const { transactionId, status, identifier } = req.body;
+    const body = req.body || {};
+    const transactionId = body.transactionId || body.transaction?.id;
+    const status = body.status || body.transaction?.status;
+    const event = body.event;
+    const identifier = body.identifier;
 
-    // VizzionPay envia status "PAID" quando confirmado
-    if (status === 'PAID' || status === 'COMPLETED') {
+    if (!transactionId) {
+      console.error('Webhook sem transactionId:', JSON.stringify(body, null, 2));
+      return res.status(400).json({ error: 'transactionId ausente' });
+    }
+
+    // VizzionPay pode enviar:
+    // - status: PAID/COMPLETED
+    // - ou event: TRANSACTION_PAID + transaction.status = COMPLETED
+    const isPaid = event === 'TRANSACTION_PAID' || status === 'PAID' || status === 'COMPLETED';
+
+    if (isPaid) {
       const payments = await query<any[]>(
         'SELECT * FROM pix_payments WHERE transaction_id = ? AND status = ?',
         [transactionId, 'PENDING']
@@ -215,18 +228,15 @@ router.post('/webhook', async (req, res) => {
         console.log('Processando pagamento confirmado:', payment);
 
         // Atualizar status do pagamento
-        await query(
-          'UPDATE pix_payments SET status = ?, paid_at = NOW() WHERE transaction_id = ?',
-          ['PAID', transactionId]
-        );
+        await query('UPDATE pix_payments SET status = ?, paid_at = NOW() WHERE transaction_id = ?', [
+          'PAID',
+          transactionId,
+        ]);
 
         // Adicionar créditos ao admin
-        const tier = PRICE_TIERS.find(t => t.credits === payment.credits);
+        const tier = PRICE_TIERS.find((t) => t.credits === payment.credits);
         if (tier) {
-          await query(
-            'UPDATE admins SET creditos = creditos + ? WHERE id = ?',
-            [payment.credits, payment.admin_id]
-          );
+          await query('UPDATE admins SET creditos = creditos + ? WHERE id = ?', [payment.credits, payment.admin_id]);
 
           await query(
             'INSERT INTO credit_transactions (to_admin_id, amount, unit_price, total_price, transaction_type) VALUES (?, ?, ?, ?, ?)',
@@ -442,9 +452,19 @@ router.post('/webhook-reseller', async (req, res) => {
     console.log('=== RESELLER PIX WEBHOOK ===');
     console.log('Body:', JSON.stringify(req.body, null, 2));
 
-    const { transactionId, status } = req.body;
+    const body = req.body || {};
+    const transactionId = body.transactionId || body.transaction?.id;
+    const status = body.status || body.transaction?.status;
+    const event = body.event;
 
-    if (status === 'PAID' || status === 'COMPLETED') {
+    if (!transactionId) {
+      console.error('[WEBHOOK] Sem transactionId:', JSON.stringify(body, null, 2));
+      return res.status(400).json({ error: 'transactionId ausente' });
+    }
+
+    const isPaid = event === 'TRANSACTION_PAID' || status === 'PAID' || status === 'COMPLETED';
+
+    if (isPaid) {
       const payments = await query<any[]>(
         'SELECT * FROM pix_payments WHERE transaction_id = ? AND status = ?',
         [transactionId, 'PENDING_RESELLER']
@@ -452,7 +472,7 @@ router.post('/webhook-reseller', async (req, res) => {
 
       if (payments.length > 0) {
         const payment = payments[0];
-        
+
         // Extrair dados do revendedor do admin_name
         const parts = payment.admin_name.split(':');
         if (parts[0] === 'RESELLER' && parts.length >= 4) {
@@ -463,7 +483,7 @@ router.post('/webhook-reseller', async (req, res) => {
 
           // Criar revendedor
           console.log(`[WEBHOOK] Criando revendedor: ${nome} (${email}) para master ${masterId}`);
-          
+
           const result = await query<any>(
             'INSERT INTO admins (nome, email, `key`, `rank`, criado_por, creditos) VALUES (?, ?, ?, ?, ?, ?)',
             [nome, email, key, 'revendedor', masterId, 5]
@@ -484,10 +504,11 @@ router.post('/webhook-reseller', async (req, res) => {
           }
 
           // Atualizar pagamento
-          await query(
-            'UPDATE pix_payments SET status = ?, paid_at = NOW(), admin_name = ? WHERE transaction_id = ?',
-            ['PAID', `Revendedor criado: ${nome}`, transactionId]
-          );
+          await query('UPDATE pix_payments SET status = ?, paid_at = NOW(), admin_name = ? WHERE transaction_id = ?', [
+            'PAID',
+            `Revendedor criado: ${nome}`,
+            transactionId,
+          ]);
 
           console.log(`Revendedor ${nome} criado com sucesso!`);
         }
@@ -538,10 +559,18 @@ router.get('/reseller-status/:transactionId', async (req, res) => {
         if (vizzionResponse.ok) {
           const vizzionData = await vizzionResponse.json();
           console.log('VizzionPay status response:', JSON.stringify(vizzionData, null, 2));
-          
-          // VizzionPay pode retornar status COMPLETED ou PAID
-          const isPaid = vizzionData.status === 'PAID' || vizzionData.status === 'COMPLETED';
-          
+
+          const remoteStatus =
+            vizzionData?.status ||
+            vizzionData?.transaction?.status ||
+            vizzionData?.data?.status ||
+            vizzionData?.data?.transaction?.status;
+
+          const remoteEvent = vizzionData?.event || vizzionData?.data?.event;
+
+          // VizzionPay pode retornar status COMPLETED/PAID, ou event TRANSACTION_PAID
+          const isPaid = remoteEvent === 'TRANSACTION_PAID' || remoteStatus === 'PAID' || remoteStatus === 'COMPLETED';
+
           if (isPaid) {
             // Processar criação do revendedor
             const parts = payment.admin_name.split(':');
@@ -555,7 +584,7 @@ router.get('/reseller-status/:transactionId', async (req, res) => {
               const existing = await query<any[]>('SELECT id FROM admins WHERE email = ?', [email]);
               if (existing.length === 0) {
                 console.log(`Criando revendedor: ${nome} (${email}) para master ${masterId}`);
-                
+
                 const result = await query<any>(
                   'INSERT INTO admins (nome, email, `key`, `rank`, criado_por, creditos) VALUES (?, ?, ?, ?, ?, ?)',
                   [nome, email, key, 'revendedor', masterId, 5]
@@ -578,10 +607,11 @@ router.get('/reseller-status/:transactionId', async (req, res) => {
                 console.log(`Revendedor ${email} já existe, pulando criação`);
               }
 
-              await query(
-                'UPDATE pix_payments SET status = ?, paid_at = NOW(), admin_name = ? WHERE transaction_id = ?',
-                ['PAID', `Revendedor criado: ${nome}`, transactionId]
-              );
+              await query('UPDATE pix_payments SET status = ?, paid_at = NOW(), admin_name = ? WHERE transaction_id = ?', [
+                'PAID',
+                `Revendedor criado: ${nome}`,
+                transactionId,
+              ]);
 
               return res.json({ status: 'PAID', message: 'Revendedor criado com sucesso!' });
             }
