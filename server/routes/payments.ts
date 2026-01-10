@@ -462,17 +462,26 @@ router.post('/webhook-reseller', async (req, res) => {
           const masterId = payment.admin_id;
 
           // Criar revendedor
+          console.log(`[WEBHOOK] Criando revendedor: ${nome} (${email}) para master ${masterId}`);
+          
           const result = await query<any>(
             'INSERT INTO admins (nome, email, `key`, `rank`, criado_por, creditos) VALUES (?, ?, ?, ?, ?, ?)',
             [nome, email, key, 'revendedor', masterId, 5]
           );
 
-          // Registrar transação
-          await query(
-            `INSERT INTO credit_transactions (from_admin_id, to_admin_id, amount, total_price, transaction_type) 
-             VALUES (?, ?, ?, ?, ?)`,
-            [masterId, result.insertId, 5, 90, 'reseller_creation']
-          );
+          console.log(`[WEBHOOK] Revendedor criado com ID: ${result.insertId}`);
+
+          // Registrar transação (não bloqueia se falhar)
+          try {
+            await query(
+              `INSERT INTO credit_transactions (from_admin_id, to_admin_id, amount, total_price, transaction_type) 
+               VALUES (?, ?, ?, ?, ?)`,
+              [masterId, result.insertId, 5, 90, 'reseller_creation']
+            );
+            console.log('[WEBHOOK] Transação registrada');
+          } catch (txError: any) {
+            console.error('[WEBHOOK] Erro ao registrar transação:', txError.message);
+          }
 
           // Atualizar pagamento
           await query(
@@ -541,16 +550,28 @@ router.get('/reseller-status/:transactionId', async (req, res) => {
               // Verificar se já não foi criado
               const existing = await query<any[]>('SELECT id FROM admins WHERE email = ?', [email]);
               if (existing.length === 0) {
+                console.log(`Criando revendedor: ${nome} (${email}) para master ${masterId}`);
+                
                 const result = await query<any>(
                   'INSERT INTO admins (nome, email, `key`, `rank`, criado_por, creditos) VALUES (?, ?, ?, ?, ?, ?)',
                   [nome, email, key, 'revendedor', masterId, 5]
                 );
 
-                await query(
-                  `INSERT INTO credit_transactions (from_admin_id, to_admin_id, amount, total_price, transaction_type) 
-                   VALUES (?, ?, ?, ?, ?)`,
-                  [masterId, result.insertId, 5, 90, 'reseller_creation']
-                );
+                console.log(`Revendedor criado com ID: ${result.insertId}`);
+
+                try {
+                  await query(
+                    `INSERT INTO credit_transactions (from_admin_id, to_admin_id, amount, total_price, transaction_type) 
+                     VALUES (?, ?, ?, ?, ?)`,
+                    [masterId, result.insertId, 5, 90, 'reseller_creation']
+                  );
+                  console.log('Transação de crédito registrada');
+                } catch (txError: any) {
+                  console.error('Erro ao registrar transação (pode ser AUTO_INCREMENT):', txError.message);
+                  // Não bloqueia - revendedor já foi criado
+                }
+              } else {
+                console.log(`Revendedor ${email} já existe, pulando criação`);
               }
 
               await query(
