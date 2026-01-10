@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Navigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { UserPlus, Loader2, QrCode, Copy, Check, Clock, ArrowLeft } from 'lucide-react';
+import { UserPlus, Loader2, QrCode, Copy, Check, Clock, ArrowLeft, XCircle } from 'lucide-react';
 import ReactCanvasConfetti from 'react-canvas-confetti';
 import type { CreateTypes } from 'canvas-confetti';
 import mysqlApi from '@/lib/api-mysql';
@@ -34,7 +34,14 @@ export default function CriarRevendedor() {
   const [isCreating, setIsCreating] = useState(false);
   const [pixData, setPixData] = useState<PixData | null>(null);
   const [copied, setCopied] = useState(false);
+
+  const [paymentConfirmed, setPaymentConfirmed] = useState(false);
+  const [paymentExpired, setPaymentExpired] = useState(false);
+  const [checkingPayment, setCheckingPayment] = useState(false);
   const [timeLeft, setTimeLeft] = useState(600);
+
+  const hasPlayedSound = useRef(false);
+  const checkIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const refAnimationInstance = useRef<CreateTypes | null>(null);
 
   const handleInit = useCallback(({ confetti }: { confetti: CreateTypes }) => {
@@ -43,7 +50,7 @@ export default function CriarRevendedor() {
 
   const fire = useCallback(() => {
     if (!refAnimationInstance.current) return;
-    
+
     const makeShot = (particleRatio: number, opts: any) => {
       refAnimationInstance.current?.({
         ...opts,
@@ -59,67 +66,108 @@ export default function CriarRevendedor() {
     makeShot(0.1, { spread: 120, startVelocity: 45 });
   }, []);
 
-  // Timer countdown
-  useEffect(() => {
-    if (step !== 'payment' || timeLeft <= 0) return;
-    
-    const timer = setInterval(() => {
-      setTimeLeft(prev => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          toast.error('Tempo expirado. Gere um novo PIX.');
-          setStep('form');
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
+  const playNotificationSound = useCallback(() => {
+    if (hasPlayedSound.current) return;
+    hasPlayedSound.current = true;
 
-    return () => clearInterval(timer);
-  }, [step, timeLeft]);
+    try {
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
 
-  // Polling para verificar pagamento
-  useEffect(() => {
-    if (step !== 'payment' || !pixData) return;
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+
+      oscillator.frequency.value = 800;
+      oscillator.type = 'sine';
+
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.5);
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const startPaymentVerification = useCallback((transactionId: string) => {
+    if (checkIntervalRef.current) {
+      clearInterval(checkIntervalRef.current);
+      checkIntervalRef.current = null;
+    }
 
     const checkPayment = async () => {
       try {
-        const data = await mysqlApi.payments.getResellerStatus(pixData.transactionId);
+        const data = await mysqlApi.payments.getResellerStatus(transactionId);
 
-        if (data.status === 'PAID') {
+        if (data?.status === 'PAID' || data?.status === 'COMPLETED') {
+          if (checkIntervalRef.current) {
+            clearInterval(checkIntervalRef.current);
+            checkIntervalRef.current = null;
+          }
+
+          setPaymentConfirmed(true);
+          setCheckingPayment(false);
+
+          playNotificationSound();
           fire();
+
           toast.success('Pagamento confirmado!', {
-            description: 'Revendedor criado com sucesso!'
+            description: 'Revendedor criado com sucesso!',
           });
+
           setStep('success');
-          
-          // Play sound
-          try {
-            const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-            const oscillator = audioContext.createOscillator();
-            const gainNode = audioContext.createGain();
-            
-            oscillator.connect(gainNode);
-            gainNode.connect(audioContext.destination);
-            
-            oscillator.frequency.value = 800;
-            oscillator.type = 'sine';
-            
-            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
-            
-            oscillator.start(audioContext.currentTime);
-            oscillator.stop(audioContext.currentTime + 0.5);
-          } catch {}
+          return;
         }
       } catch (error) {
         console.error('Erro ao verificar pagamento:', error);
       }
     };
 
-    const interval = setInterval(checkPayment, 5000);
-    return () => clearInterval(interval);
-  }, [step, pixData, fire]);
+    checkPayment();
+    checkIntervalRef.current = setInterval(checkPayment, 3000);
+  }, [fire, playNotificationSound]);
+
+  // Timer countdown
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+
+    if (step === 'payment' && !paymentConfirmed && !paymentExpired && timeLeft > 0) {
+      timer = setInterval(() => {
+        setTimeLeft((prev) => {
+          if (prev <= 1) {
+            setPaymentExpired(true);
+            setCheckingPayment(false);
+            if (checkIntervalRef.current) {
+              clearInterval(checkIntervalRef.current);
+              checkIntervalRef.current = null;
+            }
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [step, paymentConfirmed, paymentExpired, timeLeft]);
+
+  useEffect(() => {
+    return () => {
+      if (checkIntervalRef.current) {
+        clearInterval(checkIntervalRef.current);
+        checkIntervalRef.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (step !== 'payment' || !pixData?.transactionId) return;
+    startPaymentVerification(pixData.transactionId);
+  }, [pixData?.transactionId, startPaymentVerification, step]);
 
   if (loading) {
     return (
@@ -141,6 +189,13 @@ export default function CriarRevendedor() {
     e.preventDefault();
     setIsCreating(true);
 
+    // reset estado do pagamento
+    hasPlayedSound.current = false;
+    setPaymentConfirmed(false);
+    setPaymentExpired(false);
+    setCheckingPayment(true);
+    setTimeLeft(600);
+
     try {
       const data = await mysqlApi.payments.createResellerPix({
         masterId: admin.id,
@@ -155,12 +210,12 @@ export default function CriarRevendedor() {
       // api-mysql já lança erro com mensagem amigável quando não for ok
 
       setPixData(data);
-      setTimeLeft(600);
       setStep('payment');
       toast.success('PIX gerado! Realize o pagamento para criar o revendedor.');
     } catch (error: any) {
+      setCheckingPayment(false);
       toast.error('Erro ao gerar PIX', {
-        description: error.message
+        description: error.message,
       });
     } finally {
       setIsCreating(false);
@@ -335,17 +390,39 @@ export default function CriarRevendedor() {
               </div>
 
               <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
-                <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                <span className="text-sm text-muted-foreground">
-                  Aguardando confirmação do pagamento...
-                </span>
+                {paymentExpired ? (
+                  <>
+                    <XCircle className="h-4 w-4 text-destructive" />
+                    <span className="text-sm text-muted-foreground">
+                      Tempo expirado. Gere um novo PIX.
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                    <span className="text-sm text-muted-foreground">
+                      {checkingPayment ? 'Aguardando confirmação do pagamento...' : 'Preparando verificação...'}
+                    </span>
+                  </>
+                )}
               </div>
 
               <Button
                 type="button"
                 variant="ghost"
                 className="w-full"
-                onClick={() => setStep('form')}
+                onClick={() => {
+                  if (checkIntervalRef.current) {
+                    clearInterval(checkIntervalRef.current);
+                    checkIntervalRef.current = null;
+                  }
+                  setCheckingPayment(false);
+                  setPaymentExpired(false);
+                  setPaymentConfirmed(false);
+                  setPixData(null);
+                  setTimeLeft(600);
+                  setStep('form');
+                }}
               >
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Voltar
