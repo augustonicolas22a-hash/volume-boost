@@ -332,7 +332,7 @@ router.post('/create-reseller-pix', async (req, res) => {
     console.log('=== RESELLER PIX PAYMENT REQUEST ===');
     console.log('Request body:', { masterId, masterName, resellerData });
 
-    const RESELLER_PRICE = 90; // R$90
+    const RESELLER_PRICE = 2; // R$2 (teste)
     const RESELLER_CREDITS = 5;
 
     // Validar input
