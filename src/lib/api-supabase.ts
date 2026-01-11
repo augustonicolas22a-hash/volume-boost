@@ -348,6 +348,22 @@ export const supabaseApi = {
       return data;
     },
 
+    createResellerPix: async (params: { masterId: number; masterName: string; resellerData: { nome: string; email: string; key: string } }) => {
+      const { data, error } = await supabase.functions.invoke('create-reseller-pix', {
+        body: params
+      });
+
+      if (error) throw new Error(error.message);
+      return data;
+    },
+
+    getResellerStatus: async (transactionId: string) => {
+      const { data, error } = await supabase.functions.invoke(`check-reseller-status/${transactionId}`);
+
+      if (error) throw new Error(error.message);
+      return data;
+    },
+
     getHistory: async (_adminId: number) => {
       return [];
     },
