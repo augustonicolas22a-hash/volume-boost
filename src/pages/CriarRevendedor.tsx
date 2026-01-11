@@ -10,7 +10,7 @@ import { toast } from 'sonner';
 import { UserPlus, Loader2, QrCode, Copy, Check, Clock, ArrowLeft, XCircle } from 'lucide-react';
 import ReactCanvasConfetti from 'react-canvas-confetti';
 import type { CreateTypes } from 'canvas-confetti';
-import mysqlApi from '@/lib/api-mysql';
+import api from '@/lib/api';
 
 type Step = 'form' | 'payment' | 'success';
 
@@ -99,7 +99,7 @@ export default function CriarRevendedor() {
 
     const checkPayment = async () => {
       try {
-        const data = await mysqlApi.payments.getResellerStatus(transactionId);
+        const data = await api.payments.getResellerStatus(transactionId);
 
         if (data?.status === 'PAID' || data?.status === 'COMPLETED') {
           if (checkIntervalRef.current) {
@@ -197,7 +197,7 @@ export default function CriarRevendedor() {
     setTimeLeft(600);
 
     try {
-      const data = await mysqlApi.payments.createResellerPix({
+      const data = await api.payments.createResellerPix({
         masterId: admin.id,
         masterName: admin.nome,
         resellerData: {

@@ -6,6 +6,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const RESELLER_CREDITS = 5;
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -22,7 +24,7 @@ serve(async (req) => {
       });
     }
 
-    console.log('Checking payment status for:', transactionId);
+    console.log('Checking reseller payment status for:', transactionId);
 
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -44,7 +46,7 @@ serve(async (req) => {
       });
     }
 
-    // Se ainda está pendente, consulta VizzionPay para confirmar
+    // Se ainda está pendente, consulta VizzionPay
     if (payment.status === 'PENDING') {
       console.log('🔄 Status PENDING, consultando VizzionPay...');
       
@@ -69,7 +71,6 @@ serve(async (req) => {
             const remoteEvent = vizzionData.event;
             const remoteStatus = vizzionData.status || vizzionData.transaction?.status;
             
-            // Verifica se o pagamento foi confirmado
             const isPaid = remoteEvent === 'TRANSACTION_PAID' || 
                           remoteStatus === 'PAID' || 
                           remoteStatus === 'COMPLETED';
@@ -77,45 +78,66 @@ serve(async (req) => {
             if (isPaid) {
               console.log('✅ Pagamento confirmado via VizzionPay!');
               
-              // Verifica se é pagamento de revendedor (prefixo RESELLER:)
-              const isResellerPayment = payment.admin_name?.startsWith('RESELLER:');
+              // Verificar se é pagamento de revendedor
+              if (payment.admin_name?.startsWith('RESELLER:')) {
+                try {
+                  const resellerJson = payment.admin_name.replace('RESELLER:', '');
+                  const resellerData = JSON.parse(resellerJson);
+                  
+                  console.log('📋 Criando revendedor:', { ...resellerData, key: '***' });
+                  
+                  // Verificar se já existe
+                  const { data: existingAdmin } = await supabase
+                    .from('admins')
+                    .select('id')
+                    .eq('email', resellerData.email)
+                    .single();
+                  
+                  if (!existingAdmin) {
+                    // Hash da senha
+                    const { data: hashData } = await supabase.rpc('hash_password', {
+                      p_password: resellerData.key
+                    });
+                    
+                    // Criar revendedor
+                    const { error: insertError } = await supabase
+                      .from('admins')
+                      .insert({
+                        nome: resellerData.nome,
+                        email: resellerData.email,
+                        key: hashData || resellerData.key,
+                        rank: 'revendedor',
+                        criado_por: resellerData.masterId,
+                        creditos: RESELLER_CREDITS
+                      });
+                    
+                    if (insertError) {
+                      console.error('Erro ao criar revendedor:', insertError);
+                    } else {
+                      console.log('✅ Revendedor criado com sucesso!');
+                    }
+                  } else {
+                    console.log('⚠️ Revendedor já existe');
+                  }
+                  
+                } catch (parseError) {
+                  console.error('Erro ao parsear dados:', parseError);
+                }
+              }
               
-              // Atualiza status para PAID
-              const { error: updateError } = await supabase
+              // Atualizar status
+              await supabase
                 .from('pix_payments')
                 .update({ status: 'PAID', paid_at: new Date().toISOString() })
                 .eq('transaction_id', transactionId)
-                .eq('status', 'PENDING'); // Evita duplicação
-              
-              if (updateError) {
-                console.error('Erro ao atualizar status:', updateError);
-              }
-              
-              // Se não é revendedor, credita os créditos
-              if (!isResellerPayment) {
-                // Usar RPC para adicionar créditos atomicamente
-                const { error: rpcError } = await supabase.rpc('recharge_credits', {
-                  p_admin_id: payment.admin_id,
-                  p_amount: payment.credits,
-                  p_unit_price: payment.amount / payment.credits,
-                  p_total_price: payment.amount
-                });
-                
-                if (rpcError) {
-                  console.error('Erro ao adicionar créditos:', rpcError);
-                } else {
-                  console.log(`✅ ${payment.credits} créditos adicionados ao admin ${payment.admin_id}`);
-                }
-              }
+                .eq('status', 'PENDING');
               
               return new Response(JSON.stringify({
                 status: 'PAID',
                 transactionId: payment.transaction_id,
                 amount: payment.amount,
                 credits: payment.credits,
-                createdAt: payment.created_at,
-                paidAt: new Date().toISOString(),
-                message: "Pagamento confirmado"
+                message: "Pagamento confirmado - Revendedor criado!"
               }), {
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' },
               });
@@ -132,16 +154,14 @@ serve(async (req) => {
       transactionId: payment.transaction_id,
       amount: payment.amount,
       credits: payment.credits,
-      createdAt: payment.created_at,
-      paidAt: payment.paid_at,
-      message: payment.status === "PAID" ? "Pagamento confirmado" : "Pagamento pendente"
+      message: payment.status === "PAID" ? "Pagamento confirmado" : "Aguardando pagamento"
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
   } catch (error) {
     console.error("❌ Erro ao verificar status:", error);
-    return new Response(JSON.stringify({ error: "Erro ao verificar status do pagamento" }), {
+    return new Response(JSON.stringify({ error: "Erro ao verificar status" }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
