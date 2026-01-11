@@ -166,24 +166,113 @@ router.post('/create-pix', async (req, res) => {
   }
 });
 
-// Verificar status do pagamento
+// Verificar status do pagamento (com fallback consultando a VizzionPay)
 router.get('/status/:transactionId', async (req, res) => {
   try {
+    const { transactionId } = req.params;
+
     const payments = await query<any[]>(
       'SELECT * FROM pix_payments WHERE transaction_id = ?',
-      [req.params.transactionId]
+      [transactionId]
     );
 
     if (payments.length === 0) {
       return res.status(404).json({ error: 'Pagamento não encontrado' });
     }
 
-    res.json(payments[0]);
+    const payment = payments[0];
+
+    // Se for pagamento de revendedor, o endpoint correto é /reseller-status
+    if (typeof payment.admin_name === 'string' && payment.admin_name.startsWith('RESELLER:')) {
+      return res.status(400).json({ error: 'Use /payments/reseller-status para este pagamento' });
+    }
+
+    // Já processado
+    if (payment.status === 'PAID') {
+      return res.json(payment);
+    }
+
+    // Fallback: consultar VizzionPay quando estiver pendente
+    const publicKey = process.env.VIZZIONPAY_PUBLIC_KEY;
+    const privateKey = process.env.VIZZIONPAY_PRIVATE_KEY;
+
+    if (payment.status === 'PENDING' && publicKey && privateKey) {
+      try {
+        const vizzionResponse = await fetch(
+          `https://app.vizzionpay.com/api/v1/gateway/pix/${transactionId}`,
+          {
+            headers: {
+              'x-public-key': publicKey,
+              'x-secret-key': privateKey,
+            },
+          }
+        );
+
+        if (vizzionResponse.ok) {
+          const vizzionData = await vizzionResponse.json();
+
+          const remoteStatus =
+            vizzionData?.status ||
+            vizzionData?.transaction?.status ||
+            vizzionData?.data?.status ||
+            vizzionData?.data?.transaction?.status;
+
+          const remoteEvent = vizzionData?.event || vizzionData?.data?.event;
+          const isPaid =
+            remoteEvent === 'TRANSACTION_PAID' ||
+            remoteStatus === 'PAID' ||
+            remoteStatus === 'COMPLETED';
+
+          if (isPaid) {
+            // Re-busca com lock lógico por status (idempotência)
+            const pendingRows = await query<any[]>(
+              'SELECT * FROM pix_payments WHERE transaction_id = ? AND status = ?',
+              [transactionId, 'PENDING']
+            );
+
+            if (pendingRows.length > 0) {
+              const pendingPayment = pendingRows[0];
+
+              // Atualiza pagamento
+              await query(
+                'UPDATE pix_payments SET status = ?, paid_at = NOW() WHERE transaction_id = ?',
+                ['PAID', transactionId]
+              );
+
+              // Credita admin e registra transação
+              const tier = PRICE_TIERS.find((t) => t.credits === pendingPayment.credits);
+              if (tier) {
+                await query('UPDATE admins SET creditos = creditos + ? WHERE id = ?', [
+                  pendingPayment.credits,
+                  pendingPayment.admin_id,
+                ]);
+
+                await query(
+                  'INSERT INTO credit_transactions (to_admin_id, amount, unit_price, total_price, transaction_type) VALUES (?, ?, ?, ?, ?)',
+                  [pendingPayment.admin_id, pendingPayment.credits, tier.unitPrice, tier.total, 'recharge']
+                );
+              }
+            }
+
+            const updated = await query<any[]>(
+              'SELECT * FROM pix_payments WHERE transaction_id = ?',
+              [transactionId]
+            );
+            return res.json(updated[0]);
+          }
+        }
+      } catch (e) {
+        console.error('Erro ao consultar VizzionPay (status):', e);
+      }
+    }
+
+    return res.json(payment);
   } catch (error) {
     console.error('Erro ao verificar pagamento:', error);
-    res.status(500).json({ error: 'Erro interno do servidor' });
+    return res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });
+
 
 // Histórico de pagamentos
 router.get('/history/:adminId', async (req, res) => {

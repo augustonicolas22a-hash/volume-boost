@@ -271,28 +271,29 @@ export default function Recarregar() {
       try {
         const payment = await api.payments.checkStatus(transactionId);
 
-        if (payment?.status === 'PAID') {
+        // Confirmação: aceita PAID/COMPLETED (VizzionPay pode usar COMPLETED)
+        if (payment?.status === 'PAID' || payment?.status === 'COMPLETED') {
           if (checkIntervalRef.current) {
             clearInterval(checkIntervalRef.current);
             checkIntervalRef.current = null;
           }
-          
+
           setPaymentConfirmed(true);
           setCheckingPayment(false);
-          
+
           playNotificationSound();
           fire();
-          
+
           // Atualizar créditos do admin
           const balanceData = await api.credits.getBalance(admin.id);
           if (balanceData) {
             updateAdmin({ ...admin, creditos: balanceData.credits });
           }
-          
+
           fetchPaymentHistory();
-          
+
           toast.success('Pagamento confirmado!', {
-            description: `${payment.credits} créditos adicionados à sua conta`
+            description: `${payment.credits} créditos adicionados à sua conta`,
           });
 
           setTimeout(() => {
