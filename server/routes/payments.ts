@@ -5,7 +5,7 @@ const router = Router();
 
 // Tabela de preços - DEVE bater com o frontend
 const PRICE_TIERS = [
-  { credits: 5, unitPrice: 14.0, total: 2 },
+  { credits: 5, unitPrice: 14.0, total: 70 },
   { credits: 10, unitPrice: 14.0, total: 140 },
   { credits: 25, unitPrice: 13.5, total: 337.5 },
   { credits: 50, unitPrice: 13.0, total: 650 },
@@ -20,8 +20,8 @@ const PRICE_TIERS = [
   { credits: 1000, unitPrice: 9.0, total: 9000 },
 ];
 
-// Preço para criação de revendedor (R$2 para teste, voltar para R$90 em produção)
-const RESELLER_PRICE = 2;
+// Preço para criação de revendedor
+const RESELLER_PRICE = 90;
 const RESELLER_CREDITS = 5;
 
 const ALLOWED_PACKAGES = [5, 10, 25, 50, 75, 100, 150, 200, 250, 300, 400, 500, 1000];
