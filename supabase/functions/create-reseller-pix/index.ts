@@ -7,7 +7,7 @@ const corsHeaders = {
 };
 
 // Preço e créditos para ativação de revendedor
-const RESELLER_PRICE = 2.00; // R$2,00 para teste
+const RESELLER_PRICE = 90.00; // R$90,00 produção
 const RESELLER_CREDITS = 5;
 
 serve(async (req) => {
