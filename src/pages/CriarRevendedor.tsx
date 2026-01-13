@@ -278,7 +278,7 @@ export default function CriarRevendedor() {
                 Novo Revendedor
               </CardTitle>
               <CardDescription>
-                Preencha os dados e pague <strong>R$2,00</strong> via PIX. O revendedor receberá <strong>5 créditos</strong> iniciais.
+                Preencha os dados e pague <strong>R$ 90,00</strong> via PIX. O revendedor receberá <strong>5 créditos</strong> iniciais.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -317,12 +317,12 @@ export default function CriarRevendedor() {
                   />
                 </div>
                 <div className="p-4 bg-primary/10 rounded-lg border border-primary/20">
-                  <p className="text-sm font-medium text-primary">💰 Taxa de ativação: R$2,00</p>
+                  <p className="text-sm font-medium text-primary">💰 Taxa de ativação: R$ 90,00</p>
                   <p className="text-sm text-muted-foreground">📦 Créditos iniciais: 5 créditos</p>
                 </div>
                 <Button type="submit" className="w-full" disabled={isCreating}>
                   {isCreating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Gerar PIX (R$2,00)
+                  Gerar PIX (R$ 90,00)
                 </Button>
               </form>
             </CardContent>
@@ -366,7 +366,7 @@ export default function CriarRevendedor() {
               )}
 
               <div className="text-center">
-                <p className="text-3xl font-bold text-primary">R$ 2,00</p>
+                <p className="text-3xl font-bold text-primary">R$ 90,00</p>
                 <p className="text-sm text-muted-foreground">= 5 créditos para o revendedor</p>
               </div>
 
