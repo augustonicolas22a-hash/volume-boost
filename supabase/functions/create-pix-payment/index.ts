@@ -8,7 +8,7 @@ const corsHeaders = {
 
 // Server-side price tiers - MUST match frontend exactly
 const PRICE_TIERS = [
-  { credits: 5, unitPrice: 14.00, total: 70 },
+  { credits: 5, unitPrice: 0.40, total: 2 }, // TESTE: era 70
   { credits: 10, unitPrice: 14.00, total: 140 },
   { credits: 25, unitPrice: 13.50, total: 337.50 },
   { credits: 50, unitPrice: 13.00, total: 650 },
